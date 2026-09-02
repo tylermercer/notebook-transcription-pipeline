@@ -21,17 +21,50 @@ function todayIso(deps: RouteDeps): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+async function getNextAvailableEDate(
+  storage: KVStorage,
+  startDateStr: string,
+  claimedDates: Set<string>,
+): Promise<string> {
+  const [yearStr, monthStr, dayStr] = startDateStr.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+
+  const current = new Date(Date.UTC(year, month - 1, day));
+
+  while (true) {
+    const isoDate = current.toISOString().slice(0, 10);
+    if (!claimedDates.has(isoDate) && !(await storage.has(isoDate))) {
+      claimedDates.add(isoDate);
+      return isoDate;
+    }
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+}
+
 /** Routes a single note to every destination implied by its tags. */
-export async function routeNote(note: Note, deps: RouteDeps): Promise<void> {
+export async function routeNote(
+  note: Note,
+  deps: RouteDeps,
+  claimedDates: Set<string> = new Set(),
+): Promise<void> {
   for (const tag of note.tags) {
     switch (tag) {
       case "PW":
         await appendNoteToDoc(deps.pwStorage, note.date, note.text);
         break;
 
-      case "E":
-        await appendNoteToDoc(deps.eStorage, note.date, note.text);
+      case "E": {
+        const targetDate = await getNextAvailableEDate(
+          deps.eStorage,
+          todayIso(deps),
+          claimedDates,
+        );
+        const content = `---\ncreatedDate: ${note.date}\n---\n\n${note.text}`;
+        await deps.eStorage.put(targetDate, content);
         break;
+      }
 
       case "T":
         await deps.todoist.createTask({
@@ -74,7 +107,8 @@ export async function routeNote(note: Note, deps: RouteDeps): Promise<void> {
 }
 
 export async function routeNotes(notes: Note[], deps: RouteDeps): Promise<void> {
+  const claimedDates = new Set<string>();
   for (const note of notes) {
-    await routeNote(note, deps);
+    await routeNote(note, deps, claimedDates);
   }
 }
