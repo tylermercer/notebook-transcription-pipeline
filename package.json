@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "route": "bun run src/runner.ts",
+    "route": "bun run runner.ts",
+    "tail-notebook": "bun run scripts/tail-notebook.ts",
+    "append-notebook": "bun run scripts/append-notebook.ts",
     "test": "vitest run"
   },
   "devDependencies": {

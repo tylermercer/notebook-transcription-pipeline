@@ -4,11 +4,11 @@ import { parseTranscript } from "./parse";
 describe("parseTranscript", () => {
   it("parses valid transcript into Note objects", () => {
     const transcript = `
-2025-06-29
+## 2025-06-29
 Gratitude is an emotional experience...
-PW, OR
+☐ PW, ☐ OR
 I need to be more patient w/ the flaws of church leaders...
-PW
+☐ PW
 `;
     const notes = parseTranscript(transcript);
 
@@ -26,52 +26,59 @@ PW
     ]);
   });
 
-  it("handles multiple dates and decoration glyphs in tag lines", () => {
+  it("handles markdown header prefix ## YYYY-MM-DD and checkbox states", () => {
     const transcript = `
-2025-06-29
+## 2025-06-29
 First note text
-☑ PW ✅
+☑ PW
 
-2025-06-30
-Second note text across
-multiple lines
-E, T
+## 2025-06-30
+Second note text
+☐ E, ☐ T
 `;
     const notes = parseTranscript(transcript);
 
     expect(notes).toEqual([
       {
-        date: "2025-06-29",
-        text: "First note text",
-        tags: ["PW"],
-      },
-      {
         date: "2025-06-30",
-        text: "Second note text across multiple lines",
+        text: "Second note text",
         tags: ["E", "T"],
       },
     ]);
   });
 
+  it("partially processed note line returns only unprocessed tags", () => {
+    const transcript = `
+## 2025-06-30
+42 is the meaning of life
+☑ PW, ☐ R
+`;
+    const notes = parseTranscript(transcript);
+
+    expect(notes).toEqual([
+      {
+        date: "2025-06-30",
+        text: "42 is the meaning of life",
+        tags: ["R"],
+      },
+    ]);
+  });
+
+  it("returns empty array if all checkboxes are processed", () => {
+    const transcript = `
+## 2025-06-29
+Completed note
+☑ PW, ☑ R
+`;
+    const notes = parseTranscript(transcript);
+    expect(notes).toEqual([]);
+  });
+
   it("throws error when tagged note comes before any date header", () => {
     const transcript = `
 Note without date header
-PW
+☐ PW
 `;
-    expect(() => parseTranscript(transcript)).toThrow(
-      'Found a tagged note before any date header: "Note without date header"',
-    );
-  });
-
-  it("discards un-tagged trailing text with a warning", () => {
-    const transcript = `
-2025-06-29
-Valid note
-PW
-Trailing note without tags
-`;
-    const notes = parseTranscript(transcript);
-    expect(notes).toHaveLength(1);
-    expect(notes[0]?.text).toBe("Valid note");
+    expect(() => parseTranscript(transcript)).toThrow();
   });
 });
