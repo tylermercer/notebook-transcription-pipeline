@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "init": "bun run scripts/init.ts",
     "build": "vite build",
     "route": "bun run runner.ts",
     "tail-notebook": "bun run scripts/tail-notebook.ts",
