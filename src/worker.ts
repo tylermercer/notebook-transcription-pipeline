@@ -5,13 +5,12 @@ import { createMcpServer } from "./mcp.js";
 
 export interface Env {
   BEARER_TOKEN?: string;
-  AUTH_TOKEN?: string;
 }
 
 export const activeSessions = new Map<string, SSEServerTransport>();
 
 export function isAuthorized(request: Request, env: Env): boolean {
-  const token = env.BEARER_TOKEN || env.AUTH_TOKEN;
+  const token = env.BEARER_TOKEN;
   if (!token) {
     return true;
   }

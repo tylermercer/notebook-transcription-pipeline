@@ -10,5 +10,9 @@ export default defineConfig({
     outDir: "dist",
     target: "esnext",
     minify: false,
+    ssr: true,
+  },
+  ssr: {
+    target: "webworker",
   },
 });

@@ -43,13 +43,6 @@ describe("Bearer Token Authorization", () => {
     expect(isAuthorized(req, env)).toBe(true);
   });
 
-  it("permits request when token matches AUTH_TOKEN", () => {
-    const req = new Request("http://localhost/sse", {
-      headers: { Authorization: "Bearer my-auth-token" },
-    });
-    expect(isAuthorized(req, { AUTH_TOKEN: "my-auth-token" })).toBe(true);
-  });
-
   it("rejects request when Authorization header is missing", () => {
     const req = new Request("http://localhost/sse");
     expect(isAuthorized(req, env)).toBe(false);
@@ -69,7 +62,7 @@ describe("Bearer Token Authorization", () => {
     expect(isAuthorized(req, env)).toBe(false);
   });
 
-  it("allows requests if no BEARER_TOKEN or AUTH_TOKEN is set in env", () => {
+  it("allows requests if no BEARER_TOKEN is set in env", () => {
     const req = new Request("http://localhost/sse");
     expect(isAuthorized(req, {})).toBe(true);
   });
