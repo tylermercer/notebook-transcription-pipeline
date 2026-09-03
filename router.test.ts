@@ -200,4 +200,53 @@ describe("router", () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe("Dry Run mode", () => {
+    it("logs dry run actions without triggering side effects or mutations", async () => {
+      const logger = vi.fn();
+      const deps = createMockDeps({ dryRun: true, logger });
+
+      const notes: Note[] = [
+        { date: "2026-08-20", text: "PW note", tags: ["PW"] },
+        { date: "2026-08-20", text: "E note", tags: ["E"] },
+        { date: "2026-08-20", text: "Todoist note", tags: ["T", "I", "EQ"] },
+        { date: "2026-08-20", text: "Readwise note", tags: ["R"] },
+        { date: "2026-08-20", text: "Email note", tags: ["W"] },
+      ];
+
+      await routeNotes(notes, deps);
+
+      // Verify no actual side effects were made
+      const pwStore = (deps.pwStorage as any).store as Map<string, string>;
+      const eStore = (deps.eStorage as any).store as Map<string, string>;
+      expect(pwStore.size).toBe(0);
+      expect(eStore.size).toBe(0);
+      expect(deps.todoist.createTask).not.toHaveBeenCalled();
+      expect(deps.readwise.createHighlight).not.toHaveBeenCalled();
+      expect(deps.resend.sendEmail).not.toHaveBeenCalled();
+
+      // Verify logger received dry run logs
+      expect(logger).toHaveBeenCalledWith(
+        expect.stringContaining("[DRY RUN] [PW] Append note to PW storage"),
+      );
+      expect(logger).toHaveBeenCalledWith(
+        expect.stringContaining("[DRY RUN] [E] Save note to E storage"),
+      );
+      expect(logger).toHaveBeenCalledWith(
+        expect.stringContaining("[DRY RUN] [T] Create Todoist task in Inbox"),
+      );
+      expect(logger).toHaveBeenCalledWith(
+        expect.stringContaining("[DRY RUN] [I] Create Todoist task in Innerhelm project"),
+      );
+      expect(logger).toHaveBeenCalledWith(
+        expect.stringContaining("[DRY RUN] [EQ] Create Todoist task in EQP project"),
+      );
+      expect(logger).toHaveBeenCalledWith(
+        expect.stringContaining("[DRY RUN] [R] Create Readwise highlight"),
+      );
+      expect(logger).toHaveBeenCalledWith(
+        expect.stringContaining("[DRY RUN] [W] Send email via Resend"),
+      );
+    });
+  });
 });

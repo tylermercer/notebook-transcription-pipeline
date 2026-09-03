@@ -31,7 +31,11 @@ in the URL, or fetch via `GET /rest/v2/projects` with your token.
 ## Run
 
 ```bash
-bun run src/runner.ts path/to/transcript.txt
+# Execute routing script
+bun run runner.ts path/to/transcript.md
+
+# Run in dry-run mode (previews routing actions without making changes)
+bun run runner.ts --dry-run path/to/transcript.md
 ```
 
 Transcript format expected (plain text, one note per tag line):
@@ -43,6 +47,12 @@ PW, OR
 I need to be more patient w/ the flaws of church leaders...
 PW
 ```
+
+## Notebook Pages & GitHub Actions Workflow
+
+- **`notebook-pages/` Directory**: Store transcribed markdown files here (e.g. `notebook-pages/2025-06-29.md`).
+- **PR Dry Run**: Opening or updating a PR with added/modified files under `notebook-pages/` triggers a GitHub Actions pipeline that executes `runner.ts --dry-run` and comments the predicted actions directly on the PR.
+- **PR Close Execution**: When a PR is closed/merged, a second job triggers (currently configured to dry-run as well).
 
 ## Portability to Cloudflare Workers
 

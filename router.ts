@@ -12,6 +12,10 @@ export interface RouteDeps {
   todoist: TodoistClient;
   readwise: ReadwiseClient;
   resend: ResendClient;
+  /** When true, outputs actions without making side effects. */
+  dryRun?: boolean;
+  /** Optional custom logger function (defaults to console.log). */
+  logger?: (msg: string) => void;
   /** Injectable for testing; defaults to real "today". */
   today?: () => string;
 }
@@ -49,7 +53,67 @@ export async function routeNote(
   deps: RouteDeps,
   claimedDates: Set<string> = new Set(),
 ): Promise<void> {
+  const log = deps.logger ?? console.log;
+
   for (const tag of note.tags) {
+    if (deps.dryRun) {
+      switch (tag) {
+        case "PW":
+          log(
+            `[DRY RUN] [PW] Append note to PW storage (${deps.config.storage.pwFolder}) for date ${note.date}: "${note.text}"`,
+          );
+          break;
+
+        case "E": {
+          const targetDate = await getNextAvailableEDate(
+            deps.eStorage,
+            todayIso(deps),
+            claimedDates,
+          );
+          log(
+            `[DRY RUN] [E] Save note to E storage (${deps.config.storage.eFolder}) for date ${targetDate} (createdDate: ${note.date}): "${note.text}"`,
+          );
+          break;
+        }
+
+        case "T":
+          log(
+            `[DRY RUN] [T] Create Todoist task in Inbox (due: ${todayIso(deps)}): "${note.text}"`,
+          );
+          break;
+
+        case "I":
+          log(
+            `[DRY RUN] [I] Create Todoist task in Innerhelm project (${deps.config.todoist.innerhelmProjectId}): "${note.text}"`,
+          );
+          break;
+
+        case "EQ":
+          log(
+            `[DRY RUN] [EQ] Create Todoist task in EQP project (${deps.config.todoist.eqpProjectId}): "${note.text}"`,
+          );
+          break;
+
+        case "R":
+          log(
+            `[DRY RUN] [R] Create Readwise highlight for date ${note.date}: "${note.text}"`,
+          );
+          break;
+
+        case "W":
+          log(
+            `[DRY RUN] [W] Send email via Resend to ${deps.config.resend.toEmail} from ${deps.config.resend.fromEmail}: "${note.text}"`,
+          );
+          break;
+
+        default:
+          log(
+            `[DRY RUN] Skipping unknown tag "${tag}" on note dated ${note.date}`,
+          );
+      }
+      continue;
+    }
+
     switch (tag) {
       case "PW":
         await appendNoteToDoc(deps.pwStorage, note.date, note.text);
