@@ -25,7 +25,7 @@ export function isAuthorized(request: Request, env: Env): boolean {
   return parts[1] === token;
 }
 
-export function handleSseRequest(request: Request, agentsContent: string, notebookContent: string): Response {
+export async function handleSseRequest(request: Request, agentsContent: string, notebookContent: string): Promise<Response> {
   const url = new URL(request.url);
   const basePath = url.pathname.endsWith("/sse")
     ? url.pathname.substring(0, url.pathname.length - 4)
@@ -54,9 +54,7 @@ export function handleSseRequest(request: Request, agentsContent: string, notebo
   const transport = new SSEServerTransport(messageEndpoint, mockRes as any);
   const server = createMcpServer(agentsContent, notebookContent);
 
-  server.connect(transport).catch((err) => {
-    console.error("MCP Server connection error:", err);
-  });
+  await server.connect(transport);
 
   activeSessions.set(transport.sessionId, transport);
 
@@ -130,7 +128,7 @@ export async function handleFetch(request: Request, env: Env = {}): Promise<Resp
   const url = new URL(request.url);
 
   if (request.method === "GET" && (url.pathname === "/sse" || url.pathname === "/mcp/sse" || url.pathname === "/mcp")) {
-    return handleSseRequest(request, agentsMd, notebookMd);
+    return await handleSseRequest(request, agentsMd, notebookMd);
   }
 
   if (request.method === "POST" && (url.pathname === "/message" || url.pathname === "/mcp/message")) {
