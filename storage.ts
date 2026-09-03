@@ -7,6 +7,7 @@
 export interface KVStorage {
   get(key: string): Promise<string | null>;
   put(key: string, value: string): Promise<void>;
+  has(key: string): Promise<boolean>;
 }
 
 /**
@@ -30,6 +31,11 @@ export class FileKVStorage implements KVStorage {
 
   async put(key: string, value: string): Promise<void> {
     await Bun.write(this.pathFor(key), value);
+  }
+
+  async has(key: string): Promise<boolean> {
+    const file = Bun.file(this.pathFor(key));
+    return await file.exists();
   }
 }
 
