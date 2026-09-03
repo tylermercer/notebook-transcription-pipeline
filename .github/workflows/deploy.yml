@@ -1,0 +1,96 @@
+name: Build and Deploy to Cloudflare Workers
+
+# Expects these secrets to be configured in your GitHub repo:
+# - CLOUDFLARE_API_TOKEN
+# - CLOUDFLARE_ACCOUNT_ID
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        id: checkout_repo
+        uses: actions/checkout@v4
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Build site
+        id: build_site
+        env:
+          PUBLIC_COMMIT_HASH: ${{ github.sha }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          echo "result=built" >> $GITHUB_OUTPUT
+
+      - name: Extract variables
+        id: extract_vars
+        run: |
+          branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          slugified_branch=$(echo "$branch" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--\+/-/g' | sed 's/^-//;s/-$//')
+          truncated_slugified_branch=${slugified_branch:0:28}
+          if [[ "${truncated_slugified_branch: -1}" == "-" ]]; then
+            truncated_slugified_branch=${truncated_slugified_branch::-1}
+          fi
+          echo "branch=${branch}" >> $GITHUB_OUTPUT
+          echo "slugified_branch=${truncated_slugified_branch}" >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "datetime=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Cloudflare (main)
+        id: deploy-main
+        if: github.event_name != 'pull_request'
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy to Cloudflare (pull request)
+        id: deploy-pr
+        if: github.event_name == 'pull_request'
+        run: npx wrangler versions upload --preview-alias=${{ steps.extract_vars.outputs.slugified_branch }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Add preview URL to pull request
+        if: github.event_name == 'pull_request' && steps.build_site.outputs.result == 'built'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          comment-tag: deploy_preview
+          mode: recreate
+          message: |
+            ## Deployed to Cloudflare Workers! :rocket:
+
+            | Name                    | Result |
+            | ----------------------- | - |
+            | **Preview URL**:        | https://${{ steps.extract_vars.outputs.slugified_branch }}-notebook-router-mcp.workers.dev |
+            | **Last commit:**        | `${{ steps.extract_vars.outputs.sha_short }}` |
+            | **Deployed at**:        | `${{ steps.extract_vars.outputs.datetime }}` |
