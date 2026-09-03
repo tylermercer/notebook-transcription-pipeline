@@ -18,6 +18,14 @@ Unrecognized tokens on a tag line (e.g. a stray `OR`) are ignored rather than tr
 
 ## Setup
 
+To initialize the project, install dependencies, copy `.env.example` to `.env`, and configure Cloudflare secrets on GitHub:
+
+```bash
+pnpm run init
+```
+
+Alternatively, set up manually:
+
 ```bash
 pnpm install
 cp .env.example .env   # fill in tokens + Todoist project IDs
