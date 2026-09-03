@@ -5,6 +5,8 @@ on:
     types: [opened, synchronize, reopened, closed]
     paths:
       - 'notebook-pages/**/*.md'
+      - '!notebook-pages/**/README.md'
+      - '!notebook-pages/README.md'
 
 permissions:
   contents: read
@@ -33,13 +35,16 @@ jobs:
         with:
           files: |
             notebook-pages/**/*.md
+          files_ignore: |
+            notebook-pages/**/README.md
+            notebook-pages/README.md
 
       - name: Run Dry Run
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
           EXISTING_FILES=""
           for f in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            if [ -f "$f" ]; then
+            if [ -f "$f" ] && [ "$(basename "$f")" != "README.md" ]; then
               EXISTING_FILES="$EXISTING_FILES $f"
             fi
           done
@@ -47,7 +52,7 @@ jobs:
           if [ -n "$EXISTING_FILES" ]; then
             bun run runner.ts --dry-run $EXISTING_FILES | tee dry-run-output.txt
           else
-            echo "No existing notebook files to dry run." > dry-run-output.txt
+            echo "No existing notebook transcript files to dry run." > dry-run-output.txt
           fi
 
       - name: Comment Dry Run Output on PR
@@ -108,13 +113,16 @@ jobs:
         with:
           files: |
             notebook-pages/**/*.md
+          files_ignore: |
+            notebook-pages/**/README.md
+            notebook-pages/README.md
 
       - name: Execute Router (Dry Run for now)
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
           EXISTING_FILES=""
           for f in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            if [ -f "$f" ]; then
+            if [ -f "$f" ] && [ "$(basename "$f")" != "README.md" ]; then
               EXISTING_FILES="$EXISTING_FILES $f"
             fi
           done
