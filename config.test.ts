@@ -65,4 +65,13 @@ describe("config", () => {
 
     expect(() => loadConfig(env)).toThrow("Missing required env var: TODOIST_API_TOKEN");
   });
+
+  it("returns mock strings for missing env vars when allowMissing is true", () => {
+    const env = {};
+    const config = loadConfig(env, { allowMissing: true });
+
+    expect(config.todoist.apiToken).toBe("[DRY_RUN_MOCK_TODOIST_API_TOKEN]");
+    expect(config.readwise.apiToken).toBe("[DRY_RUN_MOCK_READWISE_API_TOKEN]");
+    expect(config.resend.apiKey).toBe("[DRY_RUN_MOCK_RESEND_API_KEY]");
+  });
 });

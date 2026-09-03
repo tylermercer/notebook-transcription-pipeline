@@ -25,10 +25,23 @@ export interface AppConfig {
  * `process.env` (Bun) or the `env` object Cloudflare Workers passes into
  * the fetch handler — nothing here is Bun-specific.
  */
-export function loadConfig(env: Record<string, string | undefined>): AppConfig {
+export interface LoadConfigOptions {
+  /** If true, returns mock placeholders for missing required env vars instead of throwing. */
+  allowMissing?: boolean;
+}
+
+export function loadConfig(
+  env: Record<string, string | undefined>,
+  options: LoadConfigOptions = {},
+): AppConfig {
   const required = (key: string): string => {
     const value = env[key];
-    if (!value) throw new Error(`Missing required env var: ${key}`);
+    if (!value) {
+      if (options.allowMissing) {
+        return `[DRY_RUN_MOCK_${key}]`;
+      }
+      throw new Error(`Missing required env var: ${key}`);
+    }
     return value;
   };
 
