@@ -4,9 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
     paths:
-      - 'notebook-pages/**/*.md'
-      - '!notebook-pages/**/README.md'
-      - '!notebook-pages/README.md'
+      - 'notebook.md'
 
 permissions:
   contents: read
@@ -34,25 +32,15 @@ jobs:
         uses: tj-actions/changed-files@v45
         with:
           files: |
-            notebook-pages/**/*.md
-          files_ignore: |
-            notebook-pages/**/README.md
-            notebook-pages/README.md
+            notebook.md
 
       - name: Run Dry Run
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
-          EXISTING_FILES=""
-          for f in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            if [ -f "$f" ] && [ "$(basename "$f")" != "README.md" ]; then
-              EXISTING_FILES="$EXISTING_FILES $f"
-            fi
-          done
-
-          if [ -n "$EXISTING_FILES" ]; then
-            bun run runner.ts --dry-run $EXISTING_FILES | tee dry-run-output.txt
+          if [ -f "notebook.md" ]; then
+            bun run runner.ts --dry-run notebook.md | tee dry-run-output.txt
           else
-            echo "No existing notebook transcript files to dry run." > dry-run-output.txt
+            echo "No existing notebook file to dry run." > dry-run-output.txt
           fi
 
       - name: Comment Dry Run Output on PR
@@ -112,23 +100,13 @@ jobs:
         uses: tj-actions/changed-files@v45
         with:
           files: |
-            notebook-pages/**/*.md
-          files_ignore: |
-            notebook-pages/**/README.md
-            notebook-pages/README.md
+            notebook.md
 
       - name: Execute Router (Dry Run for now)
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
-          EXISTING_FILES=""
-          for f in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            if [ -f "$f" ] && [ "$(basename "$f")" != "README.md" ]; then
-              EXISTING_FILES="$EXISTING_FILES $f"
-            fi
-          done
-
-          if [ -n "$EXISTING_FILES" ]; then
+          if [ -f "notebook.md" ]; then
             # Currently configured as a dry-run when PR is closed.
             # To enable live execution in the future, remove the --dry-run flag and set production secrets.
-            bun run runner.ts --dry-run $EXISTING_FILES
+            bun run runner.ts --dry-run notebook.md
           fi
