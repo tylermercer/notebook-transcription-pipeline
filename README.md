@@ -63,3 +63,29 @@ To assist transcribers in viewing existing notes and appending new notes without
 
 - **`notebook.md` Single File Pipeline**: The primary transcription log is stored in `notebook.md` in the root directory.
 - **PR Dry Run**: Opening or updating a PR that touches `notebook.md` triggers a GitHub Actions pipeline that executes `runner.ts --dry-run` and comments the predicted actions directly on the PR.
+
+## Cloudflare Worker MCP Server
+
+The project includes a Vite-built Cloudflare Worker exposing a Model Context Protocol (MCP) server over SSE.
+
+### Tool: `get_context`
+Exposes the `get_context` tool which returns `AGENTS.md` instructions and the tail of `notebook.md`.
+
+### Environment Variable & Authentication
+Requests are protected using Bearer token authentication against the `BEARER_TOKEN` secret.
+
+To set the `BEARER_TOKEN` secret in Cloudflare Workers using Wrangler:
+```bash
+npx wrangler secret put BEARER_TOKEN
+```
+
+### GitHub Actions Secrets
+The GitHub Actions deployment workflow (`.github/workflows/deploy.yml`) requires two repository secrets for Cloudflare deployment:
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+To set these secrets via the GitHub CLI (`gh`):
+```bash
+gh secret set CLOUDFLARE_API_TOKEN --body "your_cloudflare_api_token"
+gh secret set CLOUDFLARE_ACCOUNT_ID --body "your_cloudflare_account_id"
+```
