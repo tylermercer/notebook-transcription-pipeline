@@ -31,3 +31,27 @@ Contributed to Custom Infotypes arch. discussions (for self-reflections)
 
 1 Nephi 20 has a strong element of tenacity on God's part, which is neat.
 ☑ PW
+
+## 2026-07-20
+Connect "Every action is a vote" quote to avoidance amplifies avoidance post.
+☑ PW, ☑ I
+
+When you choose not to act, life calcifies around you. This is another reason there is really only the present in which to act.
+☑ R
+
+When you avoid a potential challenge, your brain has no a posteriori information on whether it actually deserved to be avoided, so it uses the only info it has: your worry.
+☑ I, ☑ R
+
+## 2026-07-22
+Things to try w/ Bella:
+- Light alarm clock
+- Toy bassinet for her baby
+☑ T
+
+Kurt Thomson — The Soul of Shame
+☐ T
+
+## 2026-07-24
+Introduce functional analysis before Othello?
+☑ I
+
