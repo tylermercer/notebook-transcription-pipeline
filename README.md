@@ -72,28 +72,44 @@ To assist transcribers in viewing existing notes and appending new notes without
 - **`notebook.md` Single File Pipeline**: The primary transcription log is stored in `notebook.md` in the root directory.
 - **PR Dry Run**: Opening or updating a PR that touches `notebook.md` triggers a GitHub Actions pipeline that executes `runner.ts --dry-run` and comments the predicted actions directly on the PR.
 
-## Cloudflare Worker MCP Server
+## Cloudflare Worker MCP Server (`notebook-router-mcp`)
 
-The project includes a Vite-built Cloudflare Worker exposing a Model Context Protocol (MCP) server over SSE.
+The project includes a stateless MCP server built for Cloudflare Workers using `agents/mcp/server` and `@modelcontextprotocol/server`. It allows AI clients (e.g. Claude on mobile) to inspect existing notes for deduplication and submit new transcriptions via GitHub Pull Requests.
 
-### Tool: `get_context`
-Exposes the `get_context` tool which returns `AGENTS.md` instructions and the tail of `notebook.md`.
+### Tools
 
-### Environment Variable & Authentication
-Requests are protected using Bearer token authentication against the `BEARER_TOKEN` secret.
+1. **`get_notebook_tail`**
+   - Fetches the last N lines of `notebook.md` from the base branch on GitHub for deduplication context.
+   - Returns tail text, file blob `sha`, and total line count.
 
-To set the `BEARER_TOKEN` secret in Cloudflare Workers using Wrangler:
+2. **`append_notebook_entry`**
+   - Takes transcribed markdown text and expected blob `sha`.
+   - Runs shallow structural format validation (`validate.ts`).
+   - Creates a new branch, appends content to `notebook.md` using SHA-gated update, and opens a Pull Request.
+
+### Authentication & Secrets
+
+The worker enforces two-layer security:
+- **`MCP_BEARER_TOKEN`**: Static bearer token checked on every request before reaching the MCP handler. Fails closed (rejects with 401) if unconfigured or invalid.
+- **`GITHUB_TOKEN`**: Fine-grained GitHub PAT (scoped to `Contents: Read and write`, `Pull requests: Read and write`) stored as a Worker secret.
+
+To set worker secrets using Wrangler:
 ```bash
-npx wrangler secret put BEARER_TOKEN
+npx wrangler secret put MCP_BEARER_TOKEN
+npx wrangler secret put GITHUB_TOKEN
 ```
 
-### GitHub Actions Secrets
-The GitHub Actions deployment workflow (`.github/workflows/deploy.yml`) requires two repository secrets for Cloudflare deployment:
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
+### Wrangler Configuration (`wrangler.jsonc`)
 
-To set these secrets via the GitHub CLI (`gh`):
-```bash
-gh secret set CLOUDFLARE_API_TOKEN --body "your_cloudflare_api_token"
-gh secret set CLOUDFLARE_ACCOUNT_ID --body "your_cloudflare_account_id"
-```
+Environment variables in `wrangler.jsonc`:
+- `GITHUB_OWNER`: GitHub repository owner
+- `GITHUB_REPO`: Repository name (`notebook-router`)
+- `GITHUB_BASE_BRANCH`: Target base branch (`main`)
+- `NOTEBOOK_PATH`: Path to target file (`notebook.md`)
+
+### Design Rationale
+
+- **Stateless Handler**: Replaces legacy stateful transport with `createMcpHandler` from `agents/mcp/server`. Avoids isolate state mismatch issues across Cloudflare Worker invocations.
+- **SHA Gating**: Concurrency is enforced via GitHub's `expected_sha` blob version check to prevent silent overwrites.
+- **Auto-resolving Branch Collisions**: Retries once with a timestamp suffix if a branch name collision occurs and logs it in the PR body.
+- **PR-and-Stop Boundary**: Keeps the human review step (GitHub Actions dry-run comment) and side-effecting `runner.ts` execution as explicit, deliberate actions.
