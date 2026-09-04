@@ -1,7 +1,53 @@
 import { describe, expect, it } from "vitest";
-import { loadConfig } from "./config";
+import { resolve } from "node:path";
+import {
+  loadConfig,
+  parseJsonc,
+  parseEnvFile,
+  stripJsoncCommentsAndTrailingCommas,
+  isDestinationEnabled,
+} from "./config";
 
 describe("config", () => {
+  it("parses JSONC content with comments and trailing commas", () => {
+    const jsonc = `
+    // Configuration file
+    {
+      /* Port number */
+      "port": 9000,
+      "notebookPath": "my-notebook.md",
+      "destinations": {
+        "pw": false, // disable PW
+        "t": true,
+      },
+    }
+    `;
+    const parsed = parseJsonc(jsonc);
+    expect(parsed).toEqual({
+      port: 9000,
+      notebookPath: "my-notebook.md",
+      destinations: {
+        pw: false,
+        t: true,
+      },
+    });
+  });
+
+  it("parses .env file content", () => {
+    const envContent = `
+# Comment
+ANTHROPIC_API_KEY="key123"
+TODOIST_API_TOKEN='token456'
+PLAIN_VAL=hello
+`;
+    const envMap = parseEnvFile(envContent);
+    expect(envMap).toEqual({
+      ANTHROPIC_API_KEY: "key123",
+      TODOIST_API_TOKEN: "token456",
+      PLAIN_VAL: "hello",
+    });
+  });
+
   it("loads config correctly when all required env vars are provided", () => {
     const env = {
       ANTHROPIC_API_KEY: "test-anthropic-key",
@@ -16,9 +62,22 @@ describe("config", () => {
       E_FOLDER: "./custom/e",
     };
 
-    const config = loadConfig(env);
+    const cwd = process.cwd();
+    const config = loadConfig(env, { scriptDir: cwd });
 
     expect(config).toEqual({
+      port: 8000,
+      notebookPath: resolve(cwd, "notebook.md"),
+      configPath: undefined,
+      destinations: {
+        pw: true,
+        e: true,
+        t: true,
+        i: true,
+        eq: true,
+        r: true,
+        w: true,
+      },
       anthropic: {
         apiKey: "test-anthropic-key",
       },
@@ -36,8 +95,8 @@ describe("config", () => {
         toEmail: "custom-to@example.com",
       },
       storage: {
-        pwFolder: "./custom/pw",
-        eFolder: "./custom/e",
+        pwFolder: resolve(cwd, "./custom/pw"),
+        eFolder: resolve(cwd, "./custom/e"),
       },
     });
   });
@@ -52,12 +111,13 @@ describe("config", () => {
       RESEND_API_KEY: "test-resend-key",
     };
 
-    const config = loadConfig(env);
+    const cwd = process.cwd();
+    const config = loadConfig(env, { scriptDir: cwd });
 
     expect(config.resend.fromEmail).toBe("notebook@yourdomain.com");
     expect(config.resend.toEmail).toBe("tmercer+notebook@lucidchart.com");
-    expect(config.storage.pwFolder).toBe("./notes/personal-writing");
-    expect(config.storage.eFolder).toBe("./notes/e");
+    expect(config.storage.pwFolder).toBe(resolve(cwd, "./notes/personal-writing"));
+    expect(config.storage.eFolder).toBe(resolve(cwd, "./notes/e"));
   });
 
   it("throws an error if a required env var is missing", () => {
@@ -80,5 +140,27 @@ describe("config", () => {
     expect(config.todoist.apiToken).toBe("[DRY_RUN_MOCK_TODOIST_API_TOKEN]");
     expect(config.readwise.apiToken).toBe("[DRY_RUN_MOCK_READWISE_API_TOKEN]");
     expect(config.resend.apiKey).toBe("[DRY_RUN_MOCK_RESEND_API_KEY]");
+  });
+
+  it("correctly identifies enabled/disabled destinations", () => {
+    const config = loadConfig(
+      {
+        ANTHROPIC_API_KEY: "a",
+        TODOIST_API_TOKEN: "b",
+        TODOIST_INNERHELM_PROJECT_ID: "c",
+        TODOIST_EQP_PROJECT_ID: "d",
+        READWISE_API_TOKEN: "e",
+        RESEND_API_KEY: "f",
+      },
+      { allowMissing: true },
+    );
+    config.destinations = {
+      pw: true,
+      t: false,
+    };
+
+    expect(isDestinationEnabled(config, "PW")).toBe(true);
+    expect(isDestinationEnabled(config, "T")).toBe(false);
+    expect(isDestinationEnabled(config, "R")).toBe(true); // default true when unmentioned
   });
 });

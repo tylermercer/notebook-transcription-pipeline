@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { loadConfig, type AppConfig } from "./config";
+import { loadConfig, isDestinationEnabled, type AppConfig } from "./config";
 import { parseTranscript } from "./parse";
 import { routeNote } from "./router";
 import { FileKVStorage } from "./storage";
@@ -84,6 +84,11 @@ export async function processFile(
 
   for (const note of notes) {
     for (const tag of note.tags) {
+      if (!isDestinationEnabled(config, tag)) {
+        customLogger(`Skipping disabled destination tag "${tag}" on note dated ${note.date}.`);
+        continue;
+      }
+
       const singleTagNote = { ...note, tags: [tag] };
 
       await routeNote(singleTagNote, {
@@ -121,29 +126,60 @@ export async function processFile(
   };
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  const isDryRun =
-    args.includes("--dry-run") ||
-    process.env.DRY_RUN === "1" ||
-    process.env.DRY_RUN === "true";
-  let filePaths = args.filter((arg) => arg !== "--dry-run");
+export function parseRunnerArgs(args: string[]): {
+  isDryRun: boolean;
+  configPath?: string;
+  filePaths: string[];
+} {
+  let isDryRun = false;
+  let configPath: string | undefined = undefined;
+  const filePaths: string[] = [];
 
-  if (filePaths.length === 0) {
-    filePaths = ["notebook.md"];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--dry-run") {
+      isDryRun = true;
+    } else if (arg === "--config" || arg === "-c") {
+      if (i + 1 < args.length) {
+        configPath = args[i + 1];
+        i++;
+      }
+    } else if (arg.startsWith("--config=")) {
+      configPath = arg.slice("--config=".length);
+    } else if (!arg.startsWith("-")) {
+      filePaths.push(arg);
+    }
   }
+
+  if (process.env.DRY_RUN === "1" || process.env.DRY_RUN === "true") {
+    isDryRun = true;
+  }
+
+  return { isDryRun, configPath, filePaths };
+}
+
+async function main() {
+  const parsed = parseRunnerArgs(process.argv.slice(2));
 
   const config = loadConfig(
     process.env as Record<string, string | undefined>,
-    { allowMissing: isDryRun },
+    {
+      allowMissing: parsed.isDryRun,
+      configPath: parsed.configPath,
+    },
   );
 
-  if (!isDryRun) {
+  let filePaths = parsed.filePaths;
+  if (filePaths.length === 0) {
+    filePaths = [config.notebookPath];
+  }
+
+  if (!parsed.isDryRun) {
     await ensureStorageFolders(config);
   }
 
   for (const filePath of filePaths) {
-    await processFile(filePath, isDryRun, config);
+    await processFile(filePath, parsed.isDryRun, config);
   }
 }
 

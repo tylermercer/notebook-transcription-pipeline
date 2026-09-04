@@ -1,4 +1,4 @@
-import type { AppConfig } from "./config";
+import { isDestinationEnabled, type AppConfig } from "./config";
 import { appendNoteToDoc, type KVStorage } from "./storage";
 import type { TodoistClient } from "./clients/todoist";
 import type { ReadwiseClient } from "./clients/readwise";
@@ -56,6 +56,11 @@ export async function routeNote(
   const log = deps.logger ?? console.log;
 
   for (const tag of note.tags) {
+    if (!isDestinationEnabled(deps.config, tag)) {
+      log(`[DISABLED] Destination tag "${tag}" is disabled in config. Skipping routing.`);
+      continue;
+    }
+
     if (deps.dryRun) {
       switch (tag) {
         case "PW":

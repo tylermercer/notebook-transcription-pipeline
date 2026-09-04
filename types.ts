@@ -18,3 +18,24 @@ export interface Note {
   /** Destination tags parsed from the checkbox line, e.g. ["PW", "OR"] */
   tags: string[];
 }
+
+export interface DestinationsConfig {
+  pw?: boolean;
+  e?: boolean;
+  t?: boolean;
+  i?: boolean;
+  eq?: boolean;
+  r?: boolean;
+  w?: boolean;
+  [key: string]: boolean | undefined;
+}
+
+export interface RawConfigFile {
+  port?: number;
+  notebookPath?: string;
+  envPath?: string;
+  destinations?: DestinationsConfig;
+  pwFolder?: string;
+  eFolder?: string;
+  [key: string]: any;
+}
