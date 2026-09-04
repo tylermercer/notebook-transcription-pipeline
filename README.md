@@ -6,13 +6,13 @@ Parses a single transcribed notebook file (`notebook.md`, not in this repo), tra
 
 | Tag | Destination |
 |-----|-------------|
-| `PW` | Appended to a markdown doc named for the note's date, in `PW_FOLDER` |
-| `E`  | Appended to a markdown doc in `E_FOLDER` with sequential dates |
+| `PW` | Appended to a markdown doc named for the note's date, in a folder specified by `PW_FOLDER` |
+| `E`  | Appended to a markdown doc in a folder specified by `E_FOLDER`, with sequential dates |
 | `T`  | Todoist Inbox task, due today |
-| `I`  | Todoist task in the `Innerhelm Writing` project |
-| `EQ` | Todoist task in the `South Hills EQP` project |
-| `R`  | Readwise highlight in the "Personal Notes" book (author Tyler Mercer), note field carries the notebook date |
-| `W`  | Email to `tmercer+notebook@lucidchart.com` via Resend |
+| `I`  | Todoist task in a project for my writing for [Innerhelm](https://innerhelm.com) |
+| `EQ` | Todoist task in a specific project |
+| `R`  | Readwise highlight in the "Personal Notes" book, note field carrying the notebook date |
+| `W`  | Email to work email via Resend |
 
 Unrecognized tokens on a tag line are ignored rather than treated as destinations.
 
