@@ -1,29 +1,17 @@
 {
   "name": "notebook-router",
   "version": "0.1.0",
-  "packageManager": "pnpm@10.5.2",
   "private": true,
   "type": "module",
   "scripts": {
-    "init": "bun run scripts/init.ts",
-    "build": "vite build",
     "route": "bun run runner.ts",
     "tail-notebook": "bun run scripts/tail-notebook.ts",
     "append-notebook": "bun run scripts/append-notebook.ts",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260903.1",
     "@types/bun": "latest",
-    "@types/node": "^26.4.1",
     "typescript": "^5.5.0",
-    "vite": "^8.2.2",
-    "vitest": "^4.1.11",
-    "wrangler": "^4.129.0"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/server": "^2.0.0",
-    "agents": "^0.22.0",
-    "zod": "^4.5.4"
+    "vitest": "^4.1.11"
   }
 }
