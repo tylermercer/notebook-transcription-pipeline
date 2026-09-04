@@ -1,17 +1,14 @@
 #!/usr/bin/env bun
-import { existsSync } from "node:fs";
+import { readNotebookTail } from "../lib/notebook";
 
 async function tailNotebook() {
   const filePath = process.env.NOTEBOOK_FILE || "notebook.md";
-  if (!existsSync(filePath)) {
+  const tail = await readNotebookTail(filePath, 10);
+  if (!tail) {
     console.log(`Notebook file "${filePath}" does not exist yet.`);
     return;
   }
-
-  const content = await Bun.file(filePath).text();
-  const lines = content.split("\n");
-  const last10 = lines.slice(-10);
-  console.log(last10.join("\n"));
+  console.log(tail);
 }
 
 tailNotebook().catch((err) => {

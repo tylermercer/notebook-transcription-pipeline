@@ -4,6 +4,7 @@ import { loadConfig } from "./config";
 describe("config", () => {
   it("loads config correctly when all required env vars are provided", () => {
     const env = {
+      ANTHROPIC_API_KEY: "test-anthropic-key",
       TODOIST_API_TOKEN: "test-todoist-token",
       TODOIST_INNERHELM_PROJECT_ID: "proj-123",
       TODOIST_EQP_PROJECT_ID: "proj-456",
@@ -18,6 +19,9 @@ describe("config", () => {
     const config = loadConfig(env);
 
     expect(config).toEqual({
+      anthropic: {
+        apiKey: "test-anthropic-key",
+      },
       todoist: {
         apiToken: "test-todoist-token",
         innerhelmProjectId: "proj-123",
@@ -40,6 +44,7 @@ describe("config", () => {
 
   it("uses default values for optional env vars", () => {
     const env = {
+      ANTHROPIC_API_KEY: "test-anthropic-key",
       TODOIST_API_TOKEN: "test-todoist-token",
       TODOIST_INNERHELM_PROJECT_ID: "proj-123",
       TODOIST_EQP_PROJECT_ID: "proj-456",
@@ -57,6 +62,7 @@ describe("config", () => {
 
   it("throws an error if a required env var is missing", () => {
     const env = {
+      ANTHROPIC_API_KEY: "test-anthropic-key",
       TODOIST_INNERHELM_PROJECT_ID: "proj-123",
       TODOIST_EQP_PROJECT_ID: "proj-456",
       READWISE_API_TOKEN: "test-readwise-token",
@@ -70,6 +76,7 @@ describe("config", () => {
     const env = {};
     const config = loadConfig(env, { allowMissing: true });
 
+    expect(config.anthropic.apiKey).toBe("[DRY_RUN_MOCK_ANTHROPIC_API_KEY]");
     expect(config.todoist.apiToken).toBe("[DRY_RUN_MOCK_TODOIST_API_TOKEN]");
     expect(config.readwise.apiToken).toBe("[DRY_RUN_MOCK_READWISE_API_TOKEN]");
     expect(config.resend.apiKey).toBe("[DRY_RUN_MOCK_RESEND_API_KEY]");

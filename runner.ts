@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-import { mkdir } from "node:fs/promises";
-import { loadConfig } from "./config";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { loadConfig, type AppConfig } from "./config";
 import { parseTranscript } from "./parse";
 import { routeNote } from "./router";
 import { FileKVStorage } from "./storage";
@@ -8,6 +8,11 @@ import { TodoistClient } from "./todoist";
 import { ReadwiseClient } from "./readwise";
 import { ResendClient } from "./resend";
 import { existsSync } from "node:fs";
+
+export async function ensureStorageFolders(config: AppConfig): Promise<void> {
+  await mkdir(config.storage.pwFolder, { recursive: true });
+  await mkdir(config.storage.eFolder, { recursive: true });
+}
 
 /**
  * Checks off a specific tag in the transcript content at or after firstUnprocessedIndex.
@@ -31,22 +36,41 @@ export function checkOffTagInContent(content: string, tag: string): string {
   return replaced;
 }
 
-async function processFile(filePath: string, isDryRun: boolean, config: any) {
+export interface ProcessFileResult {
+  notesProcessed: number;
+  tagActionsProcessed: number;
+  logLines: string[];
+}
+
+export async function processFile(
+  filePath: string,
+  isDryRun: boolean,
+  config: AppConfig,
+  logger: (msg: string) => void = console.log,
+): Promise<ProcessFileResult> {
+  const logLines: string[] = [];
+  const customLogger = (msg: string) => {
+    logLines.push(msg);
+    logger(msg);
+  };
+
   if (!existsSync(filePath)) {
-    console.warn(`File not found: ${filePath}`);
-    return;
+    const warning = `File not found: ${filePath}`;
+    console.warn(warning);
+    return { notesProcessed: 0, tagActionsProcessed: 0, logLines: [warning] };
   }
 
-  let text = await Bun.file(filePath).text();
+  let text = await readFile(filePath, "utf-8");
   const notes = parseTranscript(text);
 
   if (notes.length === 0) {
-    console.log(`No unprocessed items found in ${filePath}.`);
-    return;
+    const msg = `No unprocessed items found in ${filePath}.`;
+    customLogger(msg);
+    return { notesProcessed: 0, tagActionsProcessed: 0, logLines };
   }
 
   if (isDryRun) {
-    console.log(`--- Dry run for ${filePath} ---`);
+    customLogger(`--- Dry run for ${filePath} ---`);
   }
 
   const pwStorage = new FileKVStorage(config.storage.pwFolder);
@@ -70,24 +94,31 @@ async function processFile(filePath: string, isDryRun: boolean, config: any) {
         readwise,
         resend,
         dryRun: isDryRun,
+        logger: customLogger,
       }, claimedDates);
 
       totalProcessed++;
 
       if (!isDryRun) {
         // Read latest file content, check off tag, and write back
-        text = await Bun.file(filePath).text();
+        text = await readFile(filePath, "utf-8");
         const updatedText = checkOffTagInContent(text, tag);
-        await Bun.write(filePath, updatedText);
+        await writeFile(filePath, updatedText, "utf-8");
       }
     }
   }
 
   if (isDryRun) {
-    console.log(`[DRY RUN] Would process ${totalProcessed} tag action(s) across ${notes.length} note(s) from ${filePath}.\n`);
+    customLogger(`[DRY RUN] Would process ${totalProcessed} tag action(s) across ${notes.length} note(s) from ${filePath}.\n`);
   } else {
-    console.log(`Routed ${totalProcessed} tag action(s) across ${notes.length} note(s) from ${filePath}.`);
+    customLogger(`Routed ${totalProcessed} tag action(s) across ${notes.length} note(s) from ${filePath}.`);
   }
+
+  return {
+    notesProcessed: notes.length,
+    tagActionsProcessed: totalProcessed,
+    logLines,
+  };
 }
 
 async function main() {
@@ -108,8 +139,7 @@ async function main() {
   );
 
   if (!isDryRun) {
-    await mkdir(config.storage.pwFolder, { recursive: true });
-    await mkdir(config.storage.eFolder, { recursive: true });
+    await ensureStorageFolders(config);
   }
 
   for (const filePath of filePaths) {
