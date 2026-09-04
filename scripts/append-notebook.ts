@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { existsSync } from "node:fs";
+import { appendNotebookEntry } from "../lib/notebook";
 
 async function appendNotebook() {
   const args = process.argv.slice(2);
@@ -11,18 +11,7 @@ async function appendNotebook() {
   }
 
   const filePath = process.env.NOTEBOOK_FILE || "notebook.md";
-  let content = "";
-  if (existsSync(filePath)) {
-    content = await Bun.file(filePath).text();
-  }
-
-  let formattedText = textToAppend.trim();
-  if (content.length > 0 && !content.endsWith("\n")) {
-    formattedText = "\n" + formattedText;
-  }
-  formattedText += "\n";
-
-  await Bun.write(filePath, content + formattedText);
+  await appendNotebookEntry(filePath, textToAppend);
   console.log(`Appended entry to ${filePath}.`);
 }
 

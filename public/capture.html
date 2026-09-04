@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Capture & Transcription</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background-color: #f7f7f8;
+      color: #111;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.4rem; margin-top: 0; margin-bottom: 16px; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; }
+    input[type="file"] {
+      display: block;
+      width: 100%;
+      margin-bottom: 16px;
+      padding: 10px;
+      border: 1px border #ccc;
+      border-radius: 8px;
+    }
+    textarea {
+      width: 100%;
+      height: 240px;
+      font-family: monospace;
+      font-size: 0.95rem;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      resize: vertical;
+    }
+    button {
+      display: block;
+      width: 100%;
+      background-color: #0066cc;
+      color: #fff;
+      border: none;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:disabled { background-color: #999; cursor: not-allowed; }
+    .status { margin-top: 12px; color: #555; font-size: 0.9rem; text-align: center; }
+    .hidden { display: none !important; }
+    ul.log-list {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0;
+      background: #222;
+      color: #00ff66;
+      font-family: monospace;
+      font-size: 0.85rem;
+      padding: 12px;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    ul.log-list li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- State 1: Capture -->
+    <div id="state-capture">
+      <h1>Notebook Page Capture</h1>
+      <form id="transcribe-form">
+        <label for="image-input">Photograph notebook page(s):</label>
+        <input type="file" id="image-input" accept="image/*" capture="environment" multiple required>
+        <button type="submit" id="transcribe-btn">Transcribe</button>
+      </form>
+      <div id="transcribe-status" class="status"></div>
+    </div>
+
+    <!-- State 2: Review -->
+    <div id="state-review" class="hidden">
+      <h1>Review Transcript</h1>
+      <label for="transcript-text">Edit transcript if needed:</label>
+      <textarea id="transcript-text"></textarea>
+      <button type="button" id="commit-btn">Append & Process</button>
+      <div id="commit-status" class="status"></div>
+    </div>
+
+    <!-- State 3: Report -->
+    <div id="state-report" class="hidden">
+      <h1>Processing Report</h1>
+      <ul id="log-list" class="log-list"></ul>
+      <button type="button" id="reset-btn">Capture another page</button>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('t') || '';
+
+    const stateCapture = document.getElementById('state-capture');
+    const stateReview = document.getElementById('state-review');
+    const stateReport = document.getElementById('state-report');
+
+    const transcribeForm = document.getElementById('transcribe-form');
+    const imageInput = document.getElementById('image-input');
+    const transcribeBtn = document.getElementById('transcribe-btn');
+    const transcribeStatus = document.getElementById('transcribe-status');
+
+    const transcriptText = document.getElementById('transcript-text');
+    const commitBtn = document.getElementById('commit-btn');
+    const commitStatus = document.getElementById('commit-status');
+
+    const logList = document.getElementById('log-list');
+    const resetBtn = document.getElementById('reset-btn');
+
+    function showState(state) {
+      stateCapture.classList.add('hidden');
+      stateReview.classList.add('hidden');
+      stateReport.classList.add('hidden');
+      if (state === 'capture') stateCapture.classList.remove('hidden');
+      if (state === 'review') stateReview.classList.remove('hidden');
+      if (state === 'report') stateReport.classList.remove('hidden');
+    }
+
+    transcribeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const files = imageInput.files;
+      if (!files || files.length === 0) return;
+
+      transcribeBtn.disabled = true;
+      transcribeStatus.textContent = 'Transcribing image(s)... Please wait.';
+
+      try {
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+          formData.append('images', files[i]);
+        }
+
+        const res = await fetch(`/?t=${encodeURIComponent(token)}`, {
+          method: 'POST',
+          headers: { 'X-Action': 'transcribe' },
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Server error (${res.status}): ${errText}`);
+        }
+
+        const data = await res.json();
+        transcriptText.value = data.transcript;
+        transcribeStatus.textContent = '';
+        showState('review');
+      } catch (err) {
+        transcribeStatus.textContent = `Error: ${err.message}`;
+      } finally {
+        transcribeBtn.disabled = false;
+      }
+    });
+
+    commitBtn.addEventListener('click', async () => {
+      const text = transcriptText.value;
+      if (!text.trim()) return;
+
+      commitBtn.disabled = true;
+      commitStatus.textContent = 'Appending and processing...';
+
+      try {
+        const res = await fetch(`/?t=${encodeURIComponent(token)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Action': 'commit'
+          },
+          body: JSON.stringify({ transcript: text })
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Server error (${res.status}): ${errText}`);
+        }
+
+        const data = await res.json();
+        logList.innerHTML = '';
+        if (data.logLines && data.logLines.length > 0) {
+          data.logLines.forEach(line => {
+            const li = document.createElement('li');
+            li.textContent = line;
+            logList.appendChild(li);
+          });
+        } else {
+          const li = document.createElement('li');
+          li.textContent = 'No actions logged.';
+          logList.appendChild(li);
+        }
+
+        commitStatus.textContent = '';
+        showState('report');
+      } catch (err) {
+        commitStatus.textContent = `Error: ${err.message}`;
+      } finally {
+        commitBtn.disabled = false;
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      imageInput.value = '';
+      transcriptText.value = '';
+      showState('capture');
+    });
+  </script>
+</body>
+</html>

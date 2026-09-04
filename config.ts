@@ -1,4 +1,7 @@
 export interface AppConfig {
+  anthropic: {
+    apiKey: string;
+  };
   todoist: {
     apiToken: string;
     innerhelmProjectId: string;
@@ -46,6 +49,9 @@ export function loadConfig(
   };
 
   return {
+    anthropic: {
+      apiKey: required("ANTHROPIC_API_KEY"),
+    },
     todoist: {
       apiToken: required("TODOIST_API_TOKEN"),
       innerhelmProjectId: required("TODOIST_INNERHELM_PROJECT_ID"),
