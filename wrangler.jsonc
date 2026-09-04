@@ -5,5 +5,11 @@
   "compatibility_date": "2025-01-01",
   "compatibility_flags": [
     "nodejs_compat"
-  ]
+  ],
+  "vars": {
+    "GITHUB_OWNER": "owner",
+    "GITHUB_REPO": "notebook-router",
+    "GITHUB_BASE_BRANCH": "main",
+    "NOTEBOOK_PATH": "notebook.md"
+  }
 }

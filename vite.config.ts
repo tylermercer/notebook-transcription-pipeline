@@ -3,7 +3,9 @@ import { defineConfig } from "vite";
 export default defineConfig({
   build: {
     lib: {
-      entry: "src/worker.ts",
+      entry: {
+        worker: "src/index.ts",
+      },
       formats: ["es"],
       fileName: () => "worker.js",
     },

@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
-    "types": ["bun-types"]
+    "types": ["bun", "@cloudflare/workers-types"]
   },
   "include": ["src"]
 }

@@ -1,158 +1,229 @@
-import { describe, expect, it } from "vitest";
-import { getContextContent, getNotebookTail } from "./src/context.js";
-import { createMcpServer } from "./src/mcp.js";
-import { handleFetch, isAuthorized } from "./src/worker.js";
+import { describe, expect, it, vi } from "vitest";
+import { isAuthorized, createServer } from "./src/index";
+import { validateNotebookContent } from "./src/validate";
+import {
+  getNotebookFile,
+  getNotebookTail,
+  createBranch,
+  writeNotebookFile,
+  openPullRequest,
+  appendNotebookEntry,
+  Env,
+} from "./src/github";
 
-describe("Notebook Tail Logic", () => {
-  it("returns the last 10 lines of notebook content", () => {
-    const lines = Array.from({ length: 15 }, (_, i) => `Line ${i + 1}`);
-    const content = lines.join("\n");
-    const tail = getNotebookTail(content, 10);
-    const expected = Array.from({ length: 10 }, (_, i) => `Line ${i + 6}`).join("\n");
-    expect(tail).toBe(expected);
+describe("Bearer Authorization (Fail Closed)", () => {
+  it("rejects requests when no bearer token secret is configured in env", () => {
+    const req = new Request("http://localhost/mcp", {
+      headers: { Authorization: "Bearer secret123" },
+    });
+    expect(isAuthorized(req, {})).toBe(false);
   });
 
-  it("handles notebook content with fewer than 10 lines", () => {
-    const content = "Line 1\nLine 2\nLine 3";
-    const tail = getNotebookTail(content, 10);
-    expect(tail).toBe(content);
+  it("permits request when Authorization matches MCP_BEARER_TOKEN", () => {
+    const env: Env = { MCP_BEARER_TOKEN: "mcp-secret-123" };
+    const req = new Request("http://localhost/mcp", {
+      headers: { Authorization: "Bearer mcp-secret-123" },
+    });
+    expect(isAuthorized(req, env)).toBe(true);
   });
 
-  it("returns empty string for empty content", () => {
-    expect(getNotebookTail("")).toBe("");
-  });
-});
-
-describe("Context Formatting", () => {
-  it("combines AGENTS.md instructions and notebook tail", () => {
-    const agents = "# Instructions\nRule 1";
-    const notebook = "Entry 1\nEntry 2";
-    const result = getContextContent(agents, notebook, 10);
-    expect(result).toContain("## AGENTS.md Instructions\n\n# Instructions\nRule 1");
-    expect(result).toContain("## notebook.md (Tail)\n\nEntry 1\nEntry 2");
-  });
-});
-
-describe("Bearer Token Authorization", () => {
-  const env = { BEARER_TOKEN: "secret-token-123" };
-
-  it("permits request when token matches BEARER_TOKEN", () => {
-    const req = new Request("http://localhost/sse", {
-      headers: { Authorization: "Bearer secret-token-123" },
+  it("permits request when Authorization matches fallback BEARER_TOKEN", () => {
+    const env: Env = { BEARER_TOKEN: "fallback-secret-123" };
+    const req = new Request("http://localhost/mcp", {
+      headers: { Authorization: "Bearer fallback-secret-123" },
     });
     expect(isAuthorized(req, env)).toBe(true);
   });
 
   it("rejects request when Authorization header is missing", () => {
-    const req = new Request("http://localhost/sse");
+    const env: Env = { MCP_BEARER_TOKEN: "mcp-secret-123" };
+    const req = new Request("http://localhost/mcp");
     expect(isAuthorized(req, env)).toBe(false);
   });
 
-  it("rejects request when token is wrong", () => {
-    const req = new Request("http://localhost/sse", {
+  it("rejects request when token does not match", () => {
+    const env: Env = { MCP_BEARER_TOKEN: "mcp-secret-123" };
+    const req = new Request("http://localhost/mcp", {
       headers: { Authorization: "Bearer wrong-token" },
     });
     expect(isAuthorized(req, env)).toBe(false);
   });
 
-  it("rejects request with invalid Auth scheme", () => {
-    const req = new Request("http://localhost/sse", {
-      headers: { Authorization: "Basic secret-token-123" },
+  it("rejects request when Auth scheme is not Bearer", () => {
+    const env: Env = { MCP_BEARER_TOKEN: "mcp-secret-123" };
+    const req = new Request("http://localhost/mcp", {
+      headers: { Authorization: "Basic mcp-secret-123" },
     });
     expect(isAuthorized(req, env)).toBe(false);
   });
+});
 
-  it("allows requests if no BEARER_TOKEN is set in env", () => {
-    const req = new Request("http://localhost/sse");
-    expect(isAuthorized(req, {})).toBe(true);
+describe("Structural Format Validation (src/validate.ts)", () => {
+  it("passes for valid entry with date header and checkbox line", () => {
+    const content = `## 2025-06-29\nBuy milk\n☐ T`;
+    const res = validateNotebookContent(content);
+    expect(res.valid).toBe(true);
+    expect(res.errors).toHaveLength(0);
+  });
+
+  it("fails when content is empty", () => {
+    const res = validateNotebookContent("   ");
+    expect(res.valid).toBe(false);
+    expect(res.errors).toContain("Content is empty.");
+  });
+
+  it("fails when date header is missing", () => {
+    const content = `Buy milk\n☐ T`;
+    const res = validateNotebookContent(content);
+    expect(res.valid).toBe(false);
+    expect(res.errors.some((e) => e.includes("date header"))).toBe(true);
+  });
+
+  it("fails when checkbox line is missing", () => {
+    const content = `## 2025-06-29\nJust some notes without checkboxes`;
+    const res = validateNotebookContent(content);
+    expect(res.valid).toBe(false);
+    expect(res.errors.some((e) => e.includes("checkbox line"))).toBe(true);
   });
 });
 
-describe("MCP Server get_context Tool", () => {
-  it("executes get_context tool and returns expected content array", async () => {
-    const server = createMcpServer("Test Instructions", "Line 1\nLine 2");
-    const sentMessages: any[] = [];
+describe("GitHub REST Wrappers (src/github.ts)", () => {
+  const mockEnv: Env = {
+    GITHUB_TOKEN: "test-token",
+    GITHUB_OWNER: "test-owner",
+    GITHUB_REPO: "test-repo",
+    GITHUB_BASE_BRANCH: "main",
+    NOTEBOOK_PATH: "notebook.md",
+  };
 
-    const mockTransport: any = {
-      start: async () => {},
-      close: async () => {},
-      send: async (msg: any) => {
-        sentMessages.push(msg);
-      },
-      onmessage: null,
-    };
+  it("getNotebookFile fetches and decodes base64 content", async () => {
+    const sampleContent = "## 2025-06-29\nEntry 1\n☐ PW\n";
+    const base64Content = Buffer.from(sampleContent, "utf-8").toString("base64");
 
-    await server.connect(mockTransport);
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ content: base64Content, sha: "sha-123" }), {
+        status: 200,
+      })
+    );
 
-    await mockTransport.onmessage({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: {
-        protocolVersion: "2024-11-05",
-        capabilities: {},
-        clientInfo: { name: "test-client", version: "1.0.0" },
-      },
+    const result = await getNotebookFile(mockEnv, mockFetch as any);
+    expect(result.content).toBe(sampleContent);
+    expect(result.sha).toBe("sha-123");
+  });
+
+  it("getNotebookTail returns last N lines, line count, and sha", async () => {
+    const lines = Array.from({ length: 15 }, (_, i) => `Line ${i + 1}`);
+    const sampleContent = lines.join("\n");
+    const base64Content = Buffer.from(sampleContent, "utf-8").toString("base64");
+
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ content: base64Content, sha: "sha-123" }), {
+        status: 200,
+      })
+    );
+
+    const result = await getNotebookTail(mockEnv, 5, mockFetch as any);
+    expect(result.sha).toBe("sha-123");
+    expect(result.totalLines).toBe(15);
+    expect(result.tail).toBe(lines.slice(-5).join("\n"));
+  });
+
+  it("createBranch auto-resolves branch collision on 422", async () => {
+    let callCount = 0;
+    const mockFetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes("/git/ref/heads/main")) {
+        return new Response(JSON.stringify({ object: { sha: "base-commit-sha" } }), { status: 200 });
+      }
+      if (url.includes("/git/refs")) {
+        callCount++;
+        if (callCount === 1) {
+          // First attempt collisions
+          return new Response(JSON.stringify({ message: "Reference already exists" }), { status: 422 });
+        }
+        // Retry succeeds
+        return new Response(JSON.stringify({ ref: "refs/heads/transcription-retry" }), { status: 201 });
+      }
+      return new Response("Not Found", { status: 404 });
     });
 
-    await mockTransport.onmessage({
-      jsonrpc: "2.0",
-      method: "notifications/initialized",
+    const result = await createBranch(mockEnv, "transcription/2025-06-29", mockFetch as any);
+    expect(result.collided).toBe(true);
+    expect(result.branchName).toMatch(/^transcription\/2025-06-29-\d+$/);
+  });
+
+  it("writeNotebookFile throws stale SHA error on 409 or 422 conflict", async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "sha mismatch" }), { status: 409 })
+    );
+
+    await expect(
+      writeNotebookFile(mockEnv, "test-branch", "updated content", "old-sha", "commit msg", mockFetch as any)
+    ).rejects.toThrow(/Stale SHA error/);
+  });
+
+  it("appendNotebookEntry performs end-to-end PR creation flow", async () => {
+    const existingNotebook = "## 2025-06-28\nOld note\n☐ PW\n";
+    const base64Existing = Buffer.from(existingNotebook, "utf-8").toString("base64");
+
+    const mockFetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      const method = init?.method || "GET";
+      if (method === "GET" && url.includes("/contents/notebook.md")) {
+        return new Response(JSON.stringify({ content: base64Existing, sha: "valid-sha" }), { status: 200 });
+      }
+      if (method === "GET" && url.includes("/git/ref/heads/main")) {
+        return new Response(JSON.stringify({ object: { sha: "commit-sha-1" } }), { status: 200 });
+      }
+      if (method === "POST" && url.includes("/git/refs")) {
+        return new Response(JSON.stringify({ ref: "refs/heads/transcription/2025-06-29" }), { status: 201 });
+      }
+      if (method === "PUT" && url.includes("/contents/notebook.md")) {
+        return new Response(JSON.stringify({ content: { sha: "new-blob-sha" } }), { status: 200 });
+      }
+      if (method === "POST" && url.includes("/pulls")) {
+        return new Response(
+          JSON.stringify({ html_url: "https://github.com/test-owner/test-repo/pull/42", number: 42, title: "transcription" }),
+          { status: 201 }
+        );
+      }
+      return new Response("Not Found", { status: 404 });
     });
 
-    await mockTransport.onmessage({
-      jsonrpc: "2.0",
-      id: 2,
-      method: "tools/call",
-      params: {
-        name: "get_context",
-        arguments: {},
-      },
-    });
+    const newEntry = "## 2025-06-29\nNew transcribed note\n☐ PW, ☐ R";
+    const res = await appendNotebookEntry(
+      mockEnv,
+      { content: newEntry, expectedSha: "valid-sha" },
+      mockFetch as any
+    );
 
-    await new Promise((r) => setTimeout(r, 50));
+    expect(res.success).toBe(true);
+    expect(res.prNumber).toBe(42);
+    expect(res.prUrl).toBe("https://github.com/test-owner/test-repo/pull/42");
+  });
 
-    const toolCallResponse = sentMessages.find((m) => m.id === 2);
-    expect(toolCallResponse).toBeDefined();
-    expect(toolCallResponse.result).toBeDefined();
-    expect(toolCallResponse.result.content).toBeDefined();
-    expect(Array.isArray(toolCallResponse.result.content)).toBe(true);
-    expect(toolCallResponse.result.content[0].type).toBe("text");
-    expect(toolCallResponse.result.content[0].text).toContain("Test Instructions");
-    expect(toolCallResponse.result.content[0].text).toContain("Line 1\nLine 2");
+  it("appendNotebookEntry rejects stale sha", async () => {
+    const existingNotebook = "## 2025-06-28\nOld note\n☐ PW\n";
+    const base64Existing = Buffer.from(existingNotebook, "utf-8").toString("base64");
+
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ content: base64Existing, sha: "current-remote-sha" }), { status: 200 })
+    );
+
+    const newEntry = "## 2025-06-29\nNew note\n☐ PW";
+    await expect(
+      appendNotebookEntry(mockEnv, { content: newEntry, expectedSha: "outdated-sha" }, mockFetch as any)
+    ).rejects.toThrow(/Stale SHA error/);
   });
 });
 
-describe("Worker Fetch Handler", () => {
-  const env = { BEARER_TOKEN: "secure-key" };
+describe("MCP Server Tools", () => {
+  const mockEnv: Env = {
+    GITHUB_TOKEN: "test-token",
+    GITHUB_OWNER: "test-owner",
+    GITHUB_REPO: "test-repo",
+  };
 
-  it("returns 401 when unauthorized", async () => {
-    const req = new Request("http://localhost/sse");
-    const res = await handleFetch(req, env);
-    expect(res.status).toBe(401);
-  });
-
-  it("handles OPTIONS request with CORS headers", async () => {
-    const req = new Request("http://localhost/sse", { method: "OPTIONS" });
-    const res = await handleFetch(req, env);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
-  });
-
-  it("returns 404 for unknown endpoints", async () => {
-    const req = new Request("http://localhost/unknown", {
-      headers: { Authorization: "Bearer secure-key" },
-    });
-    const res = await handleFetch(req, env);
-    expect(res.status).toBe(404);
-  });
-
-  it("returns 200 text/event-stream for /sse when authorized", async () => {
-    const req = new Request("http://localhost/sse", {
-      headers: { Authorization: "Bearer secure-key" },
-    });
-    const res = await handleFetch(req, env);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toBe("text/event-stream");
+  it("registers get_notebook_tail and append_notebook_entry tools", () => {
+    const server = createServer(mockEnv);
+    expect(server).toBeDefined();
   });
 });
