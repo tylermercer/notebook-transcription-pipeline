@@ -1,0 +1,23 @@
+// Example configuration file for notebook-router (JSONC format)
+{
+  // Port for local capture/transcription server (default: 8000)
+  "port": 8000,
+
+  // Path to the notebook markdown transcript file (relative to this config file or absolute)
+  "notebookPath": "notebook.md",
+
+  // Path to .env file containing secret credentials (relative to this config file or absolute)
+  "envPath": ".env",
+
+  // Toggle routing destinations on or off.
+  // Disabled destinations are skipped without checking off the tag in notebook.md.
+  "destinations": {
+    "pw": true,  // Personal Writing markdown storage
+    "e": true,   // E markdown storage
+    "t": true,   // Todoist Inbox task
+    "i": true,   // Todoist Innerhelm task
+    "eq": true,  // Todoist EQP task
+    "r": true,   // Readwise highlight
+    "w": true    // Resend email
+  }
+}

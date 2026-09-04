@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { appendNotebookEntry } from "../lib/notebook";
+import { loadConfig } from "../config";
 
 async function appendNotebook() {
   const args = process.argv.slice(2);
@@ -10,7 +11,8 @@ async function appendNotebook() {
     process.exit(1);
   }
 
-  const filePath = process.env.NOTEBOOK_FILE || "notebook.md";
+  const config = loadConfig(process.env as Record<string, string | undefined>, { allowMissing: true });
+  const filePath = process.env.NOTEBOOK_FILE || config.notebookPath;
   await appendNotebookEntry(filePath, textToAppend);
   console.log(`Appended entry to ${filePath}.`);
 }

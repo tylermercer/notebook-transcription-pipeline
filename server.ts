@@ -10,20 +10,31 @@ import { getLanIp, validateToken } from "./lib/server-helpers";
 
 async function main() {
   const args = process.argv.slice(2);
-  let port = 8000;
-  let filePath = "notebook.md";
+  let customPort: number | undefined;
+  let customFilePath: string | undefined;
+  let configPath: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--port" && i + 1 < args.length) {
-      port = parseInt(args[i + 1], 10);
+      customPort = parseInt(args[i + 1], 10);
       i++;
-    } else if (!args[i].startsWith("--")) {
-      filePath = args[i];
+    } else if (args[i].startsWith("--port=")) {
+      customPort = parseInt(args[i].slice("--port=".length), 10);
+    } else if ((args[i] === "--config" || args[i] === "-c") && i + 1 < args.length) {
+      configPath = args[i + 1];
+      i++;
+    } else if (args[i].startsWith("--config=")) {
+      configPath = args[i].slice("--config=".length);
+    } else if (!args[i].startsWith("-")) {
+      customFilePath = args[i];
     }
   }
 
   // Load config (must have real credentials for Anthropic API calls)
-  const config = loadConfig(process.env as Record<string, string | undefined>);
+  const config = loadConfig(process.env as Record<string, string | undefined>, { configPath });
+
+  const port = customPort ?? config.port;
+  const filePath = customFilePath ?? config.notebookPath;
 
   await ensureStorageFolders(config);
 
