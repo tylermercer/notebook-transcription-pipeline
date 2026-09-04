@@ -1,6 +1,6 @@
 # notebook-router
 
-Parses a single transcribed notebook file (`notebook.md`), tracks routed items using checkboxes (`☐` for unprocessed, `☑` for processed), and routes each note to its destination.
+Parses a single transcribed notebook file (`notebook.md`, not in this repo), tracks routed items using checkboxes (`☐` for unprocessed, `☑` for processed), and routes each note to its destination.
 
 ## Tags
 
@@ -14,7 +14,7 @@ Parses a single transcribed notebook file (`notebook.md`), tracks routed items u
 | `R`  | Readwise highlight in the "Personal Notes" book (author Tyler Mercer), note field carries the notebook date |
 | `W`  | Email to `tmercer+notebook@lucidchart.com` via Resend |
 
-Unrecognized tokens on a tag line (e.g. a stray `OR`) are ignored rather than treated as destinations.
+Unrecognized tokens on a tag line are ignored rather than treated as destinations.
 
 ## Setup
 
@@ -29,37 +29,22 @@ in the URL, or fetch via `GET /rest/v2/projects` with your token.
 ## Run
 
 ```bash
-# Execute routing script on default notebook file (notebook.md)
-bun run runner.ts
-
 # Execute routing script on a specific file
 bun run runner.ts path/to/notebook.md
 
 # Run in dry-run mode (previews routing actions without making changes)
-bun run runner.ts --dry-run
+bun run runner.ts --dry-run path/to/notebook.md
 ```
 
 Transcript format expected in `notebook.md`:
 
 ```markdown
 ## 2025-06-29
-Reach out to Kenneth
-☐ PW
+Text Dan about foobar
+☐ T
 
 42 is the meaning of life
 ☐ PW, ☐ R
 ```
 
-The script scans for the first unprocessed checkbox (`☐`) and processes items serially. After each item is processed (when not in `--dry-run` mode), the checkbox in `notebook.md` is updated from `☐` to `☑`.
-
-## Transcriber Utility Scripts
-
-To assist transcribers in viewing existing notes and appending new notes without duplication:
-
-- **Tail notebook**: `pnpm run tail-notebook` (displays the last 10 lines of `notebook.md`)
-- **Append note**: `pnpm run append-notebook "<text to append>"` (appends text to `notebook.md`)
-
-## Notebook Pages & GitHub Actions Workflow
-
-- **`notebook.md` Single File Pipeline**: The primary transcription log is stored in `notebook.md` in the root directory.
-- **PR Dry Run**: Opening or updating a PR that touches `notebook.md` triggers a GitHub Actions pipeline that executes `runner.ts --dry-run` and comments the predicted actions directly on the PR.
+The script scans for the first unprocessed checkbox (`☐`) and processes items serially. After each item is processed (when not in `--dry-run` mode), the checkbox in `notebook.md` is updated from `☐` to `☑`. This allows the processing to be resumed easily if one item fails, without redoing past successful work.
