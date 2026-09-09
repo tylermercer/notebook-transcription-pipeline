@@ -28,19 +28,28 @@
       width: 100%;
       margin-bottom: 16px;
       padding: 10px;
-      border: 1px border #ccc;
-      border-radius: 8px;
-    }
-    textarea {
-      width: 100%;
-      height: 240px;
-      font-family: monospace;
-      font-size: 0.95rem;
-      padding: 12px;
       border: 1px solid #ccc;
       border-radius: 8px;
+    }
+    .preview-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 12px;
       margin-bottom: 16px;
-      resize: vertical;
+    }
+    .preview-item {
+      position: relative;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: #eee;
+    }
+    .preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     button {
       display: block;
@@ -55,22 +64,27 @@
       cursor: pointer;
     }
     button:disabled { background-color: #999; cursor: not-allowed; }
+    .remove-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 26px;
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .status { margin-top: 12px; color: #555; font-size: 0.9rem; text-align: center; }
     .hidden { display: none !important; }
-    ul.log-list {
-      list-style: none;
-      padding: 0;
-      margin: 16px 0;
-      background: #222;
-      color: #00ff66;
-      font-family: monospace;
-      font-size: 0.85rem;
-      padding: 12px;
-      border-radius: 8px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    ul.log-list li { margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -80,8 +94,9 @@
       <h1>Notebook Page Capture</h1>
       <form id="transcribe-form">
         <label for="image-input">Photograph notebook page(s):</label>
-        <input type="file" id="image-input" accept="image/*" capture="environment" multiple required>
-        <button type="submit" id="transcribe-btn">Transcribe</button>
+        <input type="file" id="image-input" accept="image/*" capture="environment" multiple>
+        <div id="preview-list" class="preview-list"></div>
+        <button type="submit" id="transcribe-btn" disabled>Transcribe</button>
       </form>
       <div id="transcribe-status" class="status"></div>
     </div>
@@ -105,10 +120,79 @@
 
     const transcribeForm = document.getElementById('transcribe-form');
     const imageInput = document.getElementById('image-input');
+    const previewList = document.getElementById('preview-list');
     const transcribeBtn = document.getElementById('transcribe-btn');
     const transcribeStatus = document.getElementById('transcribe-status');
 
     const resetBtn = document.getElementById('reset-btn');
+
+    let capturedFiles = [];
+    const objectUrls = new Set();
+
+    function clearObjectUrls() {
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      objectUrls.clear();
+    }
+
+    function renderPreviews() {
+      clearObjectUrls();
+      previewList.innerHTML = '';
+
+      if (capturedFiles.length === 0) {
+        transcribeBtn.disabled = true;
+        transcribeBtn.textContent = 'Transcribe';
+        return;
+      }
+
+      transcribeBtn.disabled = false;
+      transcribeBtn.textContent = `Transcribe (${capturedFiles.length} photo${capturedFiles.length > 1 ? 's' : ''})`;
+
+      capturedFiles.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'preview-item';
+
+        const img = document.createElement('img');
+        const url = URL.createObjectURL(file);
+        objectUrls.add(url);
+        img.src = url;
+        img.alt = file.name || `Photo ${index + 1}`;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-btn';
+        removeBtn.setAttribute('aria-label', `Remove photo ${index + 1}`);
+        removeBtn.innerHTML = '&times;';
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeFile(index);
+        });
+
+        item.appendChild(img);
+        item.appendChild(removeBtn);
+        previewList.appendChild(item);
+      });
+    }
+
+    function removeFile(index) {
+      capturedFiles.splice(index, 1);
+      renderPreviews();
+    }
+
+    function resetCaptureForm() {
+      capturedFiles = [];
+      imageInput.value = '';
+      clearObjectUrls();
+      renderPreviews();
+    }
+
+    imageInput.addEventListener('change', () => {
+      const newFiles = Array.from(imageInput.files || []);
+      if (newFiles.length > 0) {
+        capturedFiles = capturedFiles.concat(newFiles);
+        imageInput.value = '';
+        renderPreviews();
+      }
+    });
 
     function showState(state) {
       stateCapture.classList.add('hidden');
@@ -119,16 +203,15 @@
 
     transcribeForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const files = imageInput.files;
-      if (!files || files.length === 0) return;
+      if (capturedFiles.length === 0) return;
 
       transcribeBtn.disabled = true;
       transcribeStatus.textContent = 'Transcribing image(s) and opening host editor... Please wait.';
 
       try {
         const formData = new FormData();
-        for (let i = 0; i < files.length; i++) {
-          formData.append('images', files[i]);
+        for (let i = 0; i < capturedFiles.length; i++) {
+          formData.append('images', capturedFiles[i]);
         }
 
         const res = await fetch(`/?t=${encodeURIComponent(token)}`, {
@@ -143,18 +226,22 @@
         }
 
         transcribeStatus.textContent = '';
+        resetCaptureForm();
         showState('complete');
       } catch (err) {
         transcribeStatus.textContent = `Error: ${err.message}`;
       } finally {
-        transcribeBtn.disabled = false;
+        transcribeBtn.disabled = capturedFiles.length === 0;
       }
     });
 
     resetBtn.addEventListener('click', () => {
-      imageInput.value = '';
+      resetCaptureForm();
       showState('capture');
     });
+
+    // Initial render state
+    renderPreviews();
   </script>
 </body>
 </html>
