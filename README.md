@@ -178,5 +178,4 @@ Example `config.jsonc`:
 | `pnpm run capture` | Starts local mobile capture & transcription web server (`server.ts`) |
 | `pnpm run route` | Executes notebook item parser and router (`runner.ts`) |
 | `pnpm run tail-notebook` | Displays recent entries from `notebook.md` |
-| `pnpm run append-notebook "<text>"` | Appends text directly to `notebook.md` |
 | `pnpm run test` | Runs the Vitest test suite |

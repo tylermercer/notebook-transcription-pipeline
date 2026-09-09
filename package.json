@@ -8,7 +8,6 @@
     "capture": "bun run server.ts",
     "route": "bun run runner.ts",
     "tail-notebook": "bun run scripts/tail-notebook.ts",
-    "append-notebook": "bun run scripts/append-notebook.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
