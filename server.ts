@@ -38,6 +38,13 @@ async function main() {
 
   await ensureStorageFolders(config);
 
+  const tail = await readNotebookTail(filePath, 10);
+  if (!tail) {
+    console.log(`Notebook file "${filePath}" does not exist yet.`);
+  } else {
+    console.log(`Notebook tail (${filePath}):\n${tail}`);
+  }
+
   const token = crypto.randomUUID();
   const lanIp = getLanIp();
   const url = `http://${lanIp}:${port}/?t=${token}`;
