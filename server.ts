@@ -83,6 +83,7 @@ async function main() {
 
       if (req.method === "POST" && (reqUrl.pathname === "/transcribe" || actionHeader === "transcribe")) {
         try {
+          console.log("Receiving images from phone...");
           const formData = await req.formData();
           const files = formData.getAll("images") as File[];
 
@@ -102,13 +103,16 @@ async function main() {
           }
 
           const recentNotebookTail = await readNotebookTail(filePath, 10);
+          console.log("Transcribing images...");
           const rawTranscript = await anthropic.transcribeImages({
             images,
             recentNotebookTail,
           });
 
+          console.log("Waiting for your editor to close the file...");
           const transcript = await openEditorWithText(rawTranscript, config.editor);
 
+          console.log(`Appending to ${filePath}`);
           await appendNotebookEntry(filePath, transcript);
 
           return new Response(JSON.stringify({ success: true, message: "Transcript reviewed on host and appended to notebook." }), {
