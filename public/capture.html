@@ -86,19 +86,12 @@
       <div id="transcribe-status" class="status"></div>
     </div>
 
-    <!-- State 2: Review -->
-    <div id="state-review" class="hidden">
-      <h1>Review Transcript</h1>
-      <label for="transcript-text">Edit transcript if needed:</label>
-      <textarea id="transcript-text"></textarea>
-      <button type="button" id="commit-btn">Append & Process</button>
-      <div id="commit-status" class="status"></div>
-    </div>
-
-    <!-- State 3: Report -->
-    <div id="state-report" class="hidden">
-      <h1>Processing Report</h1>
-      <ul id="log-list" class="log-list"></ul>
+    <!-- State 2: Host Instructions / Completion -->
+    <div id="state-complete" class="hidden">
+      <h1>Continue on Host Machine</h1>
+      <p style="margin-bottom: 20px; line-height: 1.5; color: #333;">
+        The transcript has been generated and opened in the text editor on your host machine. Review and save the transcript on the host to finalize appending it to <code>notebook.md</code>.
+      </p>
       <button type="button" id="reset-btn">Capture another page</button>
     </div>
   </div>
@@ -108,28 +101,20 @@
     const token = urlParams.get('t') || '';
 
     const stateCapture = document.getElementById('state-capture');
-    const stateReview = document.getElementById('state-review');
-    const stateReport = document.getElementById('state-report');
+    const stateComplete = document.getElementById('state-complete');
 
     const transcribeForm = document.getElementById('transcribe-form');
     const imageInput = document.getElementById('image-input');
     const transcribeBtn = document.getElementById('transcribe-btn');
     const transcribeStatus = document.getElementById('transcribe-status');
 
-    const transcriptText = document.getElementById('transcript-text');
-    const commitBtn = document.getElementById('commit-btn');
-    const commitStatus = document.getElementById('commit-status');
-
-    const logList = document.getElementById('log-list');
     const resetBtn = document.getElementById('reset-btn');
 
     function showState(state) {
       stateCapture.classList.add('hidden');
-      stateReview.classList.add('hidden');
-      stateReport.classList.add('hidden');
+      stateComplete.classList.add('hidden');
       if (state === 'capture') stateCapture.classList.remove('hidden');
-      if (state === 'review') stateReview.classList.remove('hidden');
-      if (state === 'report') stateReport.classList.remove('hidden');
+      if (state === 'complete') stateComplete.classList.remove('hidden');
     }
 
     transcribeForm.addEventListener('submit', async (e) => {
@@ -138,7 +123,7 @@
       if (!files || files.length === 0) return;
 
       transcribeBtn.disabled = true;
-      transcribeStatus.textContent = 'Transcribing image(s)... Please wait.';
+      transcribeStatus.textContent = 'Transcribing image(s) and opening host editor... Please wait.';
 
       try {
         const formData = new FormData();
@@ -157,10 +142,8 @@
           throw new Error(`Server error (${res.status}): ${errText}`);
         }
 
-        const data = await res.json();
-        transcriptText.value = data.transcript;
         transcribeStatus.textContent = '';
-        showState('review');
+        showState('complete');
       } catch (err) {
         transcribeStatus.textContent = `Error: ${err.message}`;
       } finally {
@@ -168,54 +151,8 @@
       }
     });
 
-    commitBtn.addEventListener('click', async () => {
-      const text = transcriptText.value;
-      if (!text.trim()) return;
-
-      commitBtn.disabled = true;
-      commitStatus.textContent = 'Appending and processing...';
-
-      try {
-        const res = await fetch(`/?t=${encodeURIComponent(token)}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Action': 'commit'
-          },
-          body: JSON.stringify({ transcript: text })
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Server error (${res.status}): ${errText}`);
-        }
-
-        const data = await res.json();
-        logList.innerHTML = '';
-        if (data.logLines && data.logLines.length > 0) {
-          data.logLines.forEach(line => {
-            const li = document.createElement('li');
-            li.textContent = line;
-            logList.appendChild(li);
-          });
-        } else {
-          const li = document.createElement('li');
-          li.textContent = 'No actions logged.';
-          logList.appendChild(li);
-        }
-
-        commitStatus.textContent = '';
-        showState('report');
-      } catch (err) {
-        commitStatus.textContent = `Error: ${err.message}`;
-      } finally {
-        commitBtn.disabled = false;
-      }
-    });
-
     resetBtn.addEventListener('click', () => {
       imageInput.value = '';
-      transcriptText.value = '';
       showState('capture');
     });
   </script>
