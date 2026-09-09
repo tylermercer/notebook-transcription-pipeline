@@ -13,6 +13,7 @@ import { join } from "node:path";
 export async function openEditorWithText(
   initialText: string,
   editorCommand: string = "code --wait",
+  onSpawn?: () => void,
 ): Promise<string> {
   const tempDir = await mkdtemp(join(tmpdir(), "notebook-transcript-"));
   const tempFilePath = join(tempDir, "TRANSCRIPT.md");
@@ -25,6 +26,12 @@ export async function openEditorWithText(
         shell: true,
         stdio: "inherit",
       });
+
+      if (onSpawn) {
+        child.on("spawn", () => {
+          onSpawn();
+        });
+      }
 
       child.on("error", (err) => {
         reject(new Error(`Failed to launch editor "${editorCommand}": ${err.message}`));

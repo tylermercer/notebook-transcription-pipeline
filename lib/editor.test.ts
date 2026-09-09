@@ -11,6 +11,19 @@ describe("openEditorWithText", () => {
     expect(result).toBe("## 2025-06-29\nOriginal transcript\nModified by user");
   });
 
+  it("invokes onSpawn callback when editor process spawns", async () => {
+    const mockEditor = `node -e "require('node:fs').appendFileSync(process.argv[1], '\\nSpawned test')"` ;
+    const initialText = "Initial transcript";
+    let spawnedCalled = false;
+
+    const result = await openEditorWithText(initialText, mockEditor, () => {
+      spawnedCalled = true;
+    });
+
+    expect(spawnedCalled).toBe(true);
+    expect(result).toBe("Initial transcript\nSpawned test");
+  });
+
   it("throws error and aborts if file is saved as empty", async () => {
     // Node command that overwrites file with empty string
     const mockEditor = `node -e "require('node:fs').writeFileSync(process.argv[1], '')"`;
