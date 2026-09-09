@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ReadwiseClient } from "../readwise";
+import { ReadwiseClient } from "./readwise";
 
 describe("ReadwiseClient", () => {
   beforeEach(() => {

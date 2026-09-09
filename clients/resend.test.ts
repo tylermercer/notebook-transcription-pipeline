@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ResendClient } from "../resend";
+import { ResendClient } from "./resend";
 
 describe("ResendClient", () => {
   beforeEach(() => {

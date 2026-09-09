@@ -18,6 +18,20 @@ function createMockStorage(): KVStorage & { store: Map<string, string> } {
 
 function createMockDeps(overrides?: Partial<RouteDeps>): RouteDeps {
   const config: AppConfig = {
+    port: 8000,
+    notebookPath: "notebook.md",
+    destinations: {
+      pw: true,
+      e: true,
+      t: true,
+      i: true,
+      eq: true,
+      r: true,
+      w: true,
+    },
+    anthropic: {
+      apiKey: "anthropic-key",
+    },
     todoist: {
       apiToken: "todoist-token",
       innerhelmProjectId: "innerhelm-id",

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TodoistClient } from "../todoist";
+import { TodoistClient } from "./todoist";
 
 describe("TodoistClient", () => {
   beforeEach(() => {
