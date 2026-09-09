@@ -9,6 +9,9 @@
   // Path to .env file containing secret credentials (relative to this config file or absolute)
   "envPath": ".env",
 
+  // Command to open editor for transcript revisions (default: "code --wait")
+  "editor": "code --wait",
+
   // Toggle routing destinations on or off.
   // Disabled destinations are skipped without checking off the tag in notebook.md.
   "destinations": {
