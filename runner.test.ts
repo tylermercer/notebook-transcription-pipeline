@@ -10,13 +10,13 @@ describe("checkOffTagInContent", () => {
     const input = `
 ## 2025-06-29
 Note text
-☐ PW, ☐ R
+[ ] PW, [ ] R
 `;
     const result = checkOffTagInContent(input, "PW");
     expect(result).toBe(`
 ## 2025-06-29
 Note text
-☑ PW, ☐ R
+[x] PW, [ ] R
 `);
   });
 
@@ -24,27 +24,27 @@ Note text
     const input = `
 ## 2025-06-29
 Note text
-☑ PW, ☐ R
+[x] PW, [ ] R
 `;
     const result = checkOffTagInContent(input, "R");
     expect(result).toBe(`
 ## 2025-06-29
 Note text
-☑ PW, ☑ R
+[x] PW, [x] R
 `);
   });
 
-  it("handles tags without space after checkbox e.g. ☐PW", () => {
+  it("handles tags without space after checkbox e.g. [ ]PW", () => {
     const input = `
 ## 2025-06-29
 Note text
-☐PW, ☐R
+[ ]PW, [ ]R
 `;
     const result = checkOffTagInContent(input, "PW");
     expect(result).toBe(`
 ## 2025-06-29
 Note text
-☑ PW, ☐R
+[x] PW, [ ]R
 `);
   });
 });
@@ -70,7 +70,7 @@ describe("processFile", () => {
   it("returns summary and logs when dry run is executed", async () => {
     const sampleNotebook = `## 2025-06-29
 Test dry run note
-☐ T
+[ ] T
 `;
     await writeFile(testFile, sampleNotebook, "utf-8");
 
@@ -106,7 +106,7 @@ Test dry run note
 
     const sampleNotebook = `## 2025-06-29
 Test multi destination
-☐ PW, ☐ R
+[ ] PW, [ ] R
 `;
     await writeFile(testFile, sampleNotebook, "utf-8");
 

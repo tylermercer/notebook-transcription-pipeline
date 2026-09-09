@@ -2,7 +2,7 @@
 
 `notebook-router` is a system for capturing, transcribing, parsing, and routing hand-written notebook entries to external services and local markdown document stores.
 
-It parses transcribed notebook pages (stored in `notebook.md`), tracks routed items using checkboxes (`☐` for unprocessed, `☑` for processed), and incrementally routes each note to its target destinations.
+It parses transcribed notebook pages (stored in `notebook.md`), tracks routed items using checkboxes (`[ ]` for unprocessed, `[x]` for processed), and incrementally routes each note to its target destinations.
 
 ---
 
@@ -79,22 +79,22 @@ Routing is executed as a separate CLI command (`pnpm run route` or `bun run runn
 ```markdown
 ## 2025-06-29
 Text Dan about foobar
-☐ T
+[ ] T
 
 42 is the meaning of life
-☐ PW, ☐ R
+[ ] PW, [ ] R
 ```
 
 ### Parsing & Incremental Processing
 
 1. **Unprocessed Item Detection:**
-   The parser scans `notebook.md` for the first unprocessed checkbox (`☐`). It locates the date header (`## YYYY-MM-DD`) preceding this item and starts processing from that point onward.
+   The parser scans `notebook.md` for the first unprocessed checkbox (`[ ]`). It locates the date header (`## YYYY-MM-DD`) preceding this item and starts processing from that point onward.
 
 2. **Destination Toggles:**
-   Each tag on a note is evaluated against the active configuration. If a destination is disabled (e.g., `"w": false` in `config.jsonc`), items tagged for that destination are skipped and left as `☐` in `notebook.md`, while enabled destinations on the same note are processed.
+   Each tag on a note is evaluated against the active configuration. If a destination is disabled (e.g., `"w": false` in `config.jsonc`), items tagged for that destination are skipped and left as `[ ]` in `notebook.md`, while enabled destinations on the same note are processed.
 
 3. **Incremental Disk Updates:**
-   As each tag action succeeds, the router rewrites the checkbox for that tag in `notebook.md` from `☐` to `☑`. This ensures that if processing fails mid-way (e.g., due to an API timeout), completed actions are saved and will not be re-run on subsequent executions.
+   As each tag action succeeds, the router rewrites the checkbox for that tag in `notebook.md` from `[ ]` to `[x]`. This ensures that if processing fails mid-way (e.g., due to an API timeout), completed actions are saved and will not be re-run on subsequent executions.
 
 4. **Dry-Run Mode:**
    Running with `--dry-run` or setting `DRY_RUN=1` simulates the full parse and route pipeline without making API calls or modifying `notebook.md`.

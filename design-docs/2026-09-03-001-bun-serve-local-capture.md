@@ -41,7 +41,7 @@ routine entries. It should reuse, not duplicate, the existing `parse.ts` /
 5. Browser POSTs the image(s) to the server. Server calls the Anthropic API
    with the image(s) plus the tail of `notebook.md` for dedup context (same
    idea `AGENTS.md` already describes for the manual flow), gets back a
-   draft transcript in the existing `## YYYY-MM-DD / body / ☐ TAG` format,
+   draft transcript in the existing `## YYYY-MM-DD / body / [ ] TAG` format,
    and returns it to the browser.
 6. Page shows the draft in a `<textarea>` for editing.
 7. User taps "Append & Process". Server appends the (possibly edited) text
@@ -117,9 +117,9 @@ const SYSTEM_PROMPT = `Read and transcribe handwritten text from the image(s) in
 \`\`\`markdown
 ## YYYY-MM-DD
 <note body>
-☐ <tag1>, ☐ <tag2>
+[ ] <tag1>, [ ] <tag2>
 \`\`\`
-Where the tags are one of R, PW, W, I, E, etc. Render the checkboxes as ☐ if they're unchecked and ☑ if they're checked.
+Where the tags are one of R, PW, W, I, E, etc. Render the checkboxes as [ ] if they're unchecked and [x] if they're checked.
 
 You will also be given the tail end of the existing notebook.md file for context. Some or all of the content in the photographed page(s) may have already been transcribed there — this happens when a page is re-photographed after a partial capture. Compare the handwritten content against that existing tail and omit any note that's already present, so only genuinely new content is transcribed.`;
 

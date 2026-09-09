@@ -6,9 +6,9 @@ describe("parseTranscript", () => {
     const transcript = `
 ## 2025-06-29
 Gratitude is an emotional experience...
-☐ PW, ☐ OR
+[ ] PW, [ ] OR
 I need to be more patient w/ the flaws of church leaders...
-☐ PW
+[ ] PW
 `;
     const notes = parseTranscript(transcript);
 
@@ -30,11 +30,11 @@ I need to be more patient w/ the flaws of church leaders...
     const transcript = `
 ## 2025-06-29
 First note text
-☑ PW
+[x] PW
 
 ## 2025-06-30
 Second note text
-☐ E, ☐ T
+[ ] E, [ ] T
 `;
     const notes = parseTranscript(transcript);
 
@@ -51,7 +51,7 @@ Second note text
     const transcript = `
 ## 2025-06-30
 42 is the meaning of life
-☑ PW, ☐ R
+[x] PW, [ ] R
 `;
     const notes = parseTranscript(transcript);
 
@@ -68,7 +68,7 @@ Second note text
     const transcript = `
 ## 2025-06-29
 Completed note
-☑ PW, ☑ R
+[x] PW, [x] R
 `;
     const notes = parseTranscript(transcript);
     expect(notes).toEqual([]);
@@ -77,7 +77,7 @@ Completed note
   it("throws error when tagged note comes before any date header", () => {
     const transcript = `
 Note without date header
-☐ PW
+[ ] PW
 `;
     expect(() => parseTranscript(transcript)).toThrow();
   });
