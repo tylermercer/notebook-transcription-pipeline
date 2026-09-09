@@ -35,7 +35,7 @@ Unrecognized tokens on tag lines are ignored rather than treated as destinations
 
 ## Mobile Capture & UI Flow
 
-The capture server (`server.ts`) hosts a web application (`public/capture.html`) optimized for mobile devices (smartphones/tablets) to photograph physical notebook pages, transcribes them using Claude (Anthropic Vision API), allows human review/editing, and then appends the transcript to `notebook.md` and routes the notes immediately.
+The capture server (`server.ts`) hosts a web application (`public/capture.html`) optimized for mobile devices (smartphones/tablets) to photograph physical notebook pages and transcribe them using Claude (Anthropic Vision API). Once transcribed, the server opens a host-side text editor for human review and revision before appending the entry to `notebook.md`. The mobile interface instructs the user to continue on the host machine.
 
 ### How to Start
 
@@ -50,28 +50,27 @@ When started, the server:
 2. Generates a unique single-session access token (`?t=<token>`).
 3. Prints the full web URL and renders a QR code in the terminal. Scan the QR code with a mobile device on the same local network to open the capture interface.
 
-### 3-Step UI Capture Flow
+### Capture & Revision Workflow
 
-1. **Capture (`State 1: Capture`)**
+1. **Capture (Mobile Device)**
    - User takes or selects photo(s) of physical notebook page(s) using the device camera (`capture="environment"`).
-   - Submitting sends a `POST` request (`X-Action: transcribe` or `/transcribe`) containing image payloads.
+   - Submitting sends a request (`POST /transcribe`) containing image payloads to the capture server.
    - The server calls Claude (`claude-3-5-sonnet-latest`) with the images and includes the recent tail of `notebook.md` for context (e.g. style and date structure).
 
-2. **Review (`State 2: Review`)**
-   - The server returns the generated markdown transcript.
-   - The user reviews the transcript in an editable text area and makes any necessary corrections.
+2. **Review & Revision (Host Machine)**
+   - The server automatically opens an external text editor on the host machine (configured via `editor` in `config.jsonc` or `EDITOR`/`VISUAL` environment variables, defaulting to `code --wait`) containing the draft transcript.
+   - The mobile UI displays a message instructing the user to continue reviewing and saving the transcript on the host machine.
+   - The user reviews, edits, and saves the transcript in the host editor. Upon closing the editor process, the server appends the finalized entry to `notebook.md`.
 
-3. **Append & Route (`State 3: Report`)**
-   - Clicking **"Append & Process"** sends a `POST` request (`X-Action: commit` or `/commit`) with the reviewed transcript.
-   - The server appends the new text to `notebook.md`.
-   - The server immediately executes the routing engine (`processFile`) on `notebook.md`.
-   - The execution log and status report (e.g. actions taken, items created) are displayed on the mobile interface.
+3. **Routing (Terminal / CLI)**
+   - Routing is a separate command entirely (`pnpm run route`).
+   - Results and execution logs are reported directly in the terminal output rather than in the mobile interface.
 
 ---
 
 ## Routing Mechanism
 
-Routing can be executed manually via CLI (`pnpm run route`) or automatically after committing from the Mobile Capture UI.
+Routing is executed as a separate CLI command (`pnpm run route` or `bun run runner.ts`), and reports its results directly in the terminal.
 
 ### Transcript Format
 
