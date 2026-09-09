@@ -16,18 +16,26 @@ async function main() {
   let configPath: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--port" && i + 1 < args.length) {
-      customPort = parseInt(args[i + 1], 10);
-      i++;
-    } else if (args[i].startsWith("--port=")) {
-      customPort = parseInt(args[i].slice("--port=".length), 10);
-    } else if ((args[i] === "--config" || args[i] === "-c") && i + 1 < args.length) {
-      configPath = args[i + 1];
-      i++;
-    } else if (args[i].startsWith("--config=")) {
-      configPath = args[i].slice("--config=".length);
-    } else if (!args[i].startsWith("-")) {
-      customFilePath = args[i];
+    const arg = args[i];
+    if (!arg) continue;
+    if (arg === "--port") {
+      const nextArg = args[i + 1];
+      if (nextArg !== undefined) {
+        customPort = parseInt(nextArg, 10);
+        i++;
+      }
+    } else if (arg.startsWith("--port=")) {
+      customPort = parseInt(arg.slice("--port=".length), 10);
+    } else if (arg === "--config" || arg === "-c") {
+      const nextArg = args[i + 1];
+      if (nextArg !== undefined) {
+        configPath = nextArg;
+        i++;
+      }
+    } else if (arg.startsWith("--config=")) {
+      configPath = arg.slice("--config=".length);
+    } else if (!arg.startsWith("-")) {
+      customFilePath = arg;
     }
   }
 

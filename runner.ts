@@ -4,9 +4,9 @@ import { loadConfig, isDestinationEnabled, type AppConfig } from "./config";
 import { parseTranscript } from "./parse";
 import { routeNote } from "./router";
 import { FileKVStorage } from "./storage";
-import { TodoistClient } from "./todoist";
-import { ReadwiseClient } from "./readwise";
-import { ResendClient } from "./resend";
+import { TodoistClient } from "./clients/todoist";
+import { ReadwiseClient } from "./clients/readwise";
+import { ResendClient } from "./clients/resend";
 import { existsSync } from "node:fs";
 
 export async function ensureStorageFolders(config: AppConfig): Promise<void> {
@@ -137,11 +137,13 @@ export function parseRunnerArgs(args: string[]): {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    if (!arg) continue;
     if (arg === "--dry-run") {
       isDryRun = true;
     } else if (arg === "--config" || arg === "-c") {
-      if (i + 1 < args.length) {
-        configPath = args[i + 1];
+      const nextArg = args[i + 1];
+      if (nextArg !== undefined) {
+        configPath = nextArg;
         i++;
       }
     } else if (arg.startsWith("--config=")) {
