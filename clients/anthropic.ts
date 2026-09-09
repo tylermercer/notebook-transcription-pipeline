@@ -12,9 +12,9 @@ const SYSTEM_PROMPT = `Read and transcribe handwritten text from the image(s) in
 \`\`\`markdown
 ## YYYY-MM-DD
 <note body>
-☐ <tag1>, ☐ <tag2>
+[ ] <tag1>, [ ] <tag2>
 \`\`\`
-Where the tags are one of R, PW, W, I, E, etc. Render the checkboxes as ☐ if they're unchecked and ☑ if they're checked.
+Where the tags are one of R, PW, W, I, E, etc. Render the checkboxes as [ ] if they're unchecked and [x] if they're checked.
 
 You will also be given the tail end of the existing notebook.md file for context. Some or all of the content in the photographed page(s) may have already been transcribed there — this happens when a page is re-photographed after a partial capture. Compare the handwritten content against that existing tail and omit any note that's already present, so only genuinely new content is transcribed.`;
 

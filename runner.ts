@@ -16,15 +16,15 @@ export async function ensureStorageFolders(config: AppConfig): Promise<void> {
 
 /**
  * Checks off a specific tag in the transcript content at or after firstUnprocessedIndex.
- * Replaces the first occurrence of `☐TAG` or `☐ TAG` with `☑ TAG` starting from the first unprocessed position.
+ * Replaces the first occurrence of `[ ]TAG` or `[ ] TAG` with `[x] TAG` starting from the first unprocessed position.
  */
 export function checkOffTagInContent(content: string, tag: string): string {
-  // Find index of first unprocessed checkbox '☐'
-  const firstUnprocessedIndex = content.indexOf("☐");
+  // Find index of first unprocessed checkbox '[ ]'
+  const firstUnprocessedIndex = content.indexOf("[ ]");
   if (firstUnprocessedIndex === -1) return content;
 
-  // Pattern matches ☐ TAG or ☐TAG
-  const pattern = new RegExp(`☐\\s*${tag}\\b`);
+  // Pattern matches [ ] TAG or [ ]TAG
+  const pattern = new RegExp(`\\[ \\]\\s*${tag}\\b`);
   const match = content.slice(firstUnprocessedIndex).match(pattern);
 
   if (!match || match.index === undefined) {
@@ -32,7 +32,7 @@ export function checkOffTagInContent(content: string, tag: string): string {
   }
 
   const matchPos = firstUnprocessedIndex + match.index;
-  const replaced = content.slice(0, matchPos) + `☑ ${tag}` + content.slice(matchPos + match[0].length);
+  const replaced = content.slice(0, matchPos) + `[x] ${tag}` + content.slice(matchPos + match[0].length);
   return replaced;
 }
 

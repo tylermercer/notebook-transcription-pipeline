@@ -2,8 +2,8 @@ import { KNOWN_TAGS, type Note } from "./types";
 
 const DATE_RE = /^(?:##\s*)?(\d{4}-\d{2}-\d{2})$/;
 
-// Checkbox / decoration glyphs that show up in the transcript but aren't tags
-const DECORATION_RE = /[☒☐☑✅✓✗🖤❤️♥]/g;
+// Checkbox pattern for tag lines: e.g. [ ] PW or [x] PW
+const TAG_ITEM_RE = /(\[[ xX]\])\s*\b([A-Za-z]+)\b/g;
 
 export interface ParsedTagItem {
   tag: string;
@@ -15,25 +15,25 @@ export interface ParsedTagItem {
  * Extracts tag items from a line. Returns empty array if not a tag line.
  */
 export function extractTagItems(line: string): ParsedTagItem[] {
-  // Normalize space between checkbox glyph and tag name (e.g. "☐ PW" -> "☐PW", "☑ PW" -> "☑PW")
-  const normalized = line.replace(/([☐☑])\s+([A-Za-z]+)/g, "$1$2");
-  const rawTokens = normalized.split(/[,\s]+/).filter(Boolean);
-  if (rawTokens.length === 0) return [];
+  const matches = Array.from(line.matchAll(TAG_ITEM_RE));
+  if (matches.length === 0) return [];
 
   const items: ParsedTagItem[] = [];
   let unknownCount = 0;
 
-  for (const token of rawTokens) {
-    const isProcessed = token.includes("☑");
-    const cleanedTag = token.replace(DECORATION_RE, "").trim();
+  for (const match of matches) {
+    const checkbox = match[1] || "";
+    const rawTag = match[2] || "";
+    const isProcessed =
+      checkbox.includes("x") || checkbox.includes("X");
 
-    if (cleanedTag && KNOWN_TAGS.has(cleanedTag)) {
+    if (KNOWN_TAGS.has(rawTag)) {
       items.push({
-        tag: cleanedTag,
+        tag: rawTag,
         processed: isProcessed,
-        rawToken: token,
+        rawToken: match[0],
       });
-    } else if (cleanedTag) {
+    } else if (rawTag) {
       unknownCount++;
     }
   }

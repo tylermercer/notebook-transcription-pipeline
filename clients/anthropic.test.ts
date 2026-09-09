@@ -9,7 +9,7 @@ describe("AnthropicClient", () => {
     async function* mockStream() {
       yield { type: "content_block_delta", delta: { type: "text_delta", text: "## 2025-06-29\n" } };
       yield { type: "content_block_delta", delta: { type: "text_delta", text: "Transcribed note\n" } };
-      yield { type: "content_block_delta", delta: { type: "text_delta", text: "☐ PW" } };
+      yield { type: "content_block_delta", delta: { type: "text_delta", text: "[ ] PW" } };
     }
 
     const mockAnthropicSdk = {
@@ -30,7 +30,7 @@ describe("AnthropicClient", () => {
       recentNotebookTail: "Tail context",
     });
 
-    expect(result).toBe("## 2025-06-29\nTranscribed note\n☐ PW");
+    expect(result).toBe("## 2025-06-29\nTranscribed note\n[ ] PW");
     expect(capturedParams.model).toBe("claude-sonnet-5");
     expect(capturedParams.messages[0].content).toHaveLength(3);
     expect(capturedParams.messages[0].content[0]).toEqual({
