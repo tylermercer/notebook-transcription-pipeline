@@ -5,6 +5,7 @@ import type { DestinationsConfig, RawConfigFile } from "./types";
 export interface AppConfig {
   port: number;
   notebookPath: string;
+  editor: string;
   destinations: DestinationsConfig;
   configPath?: string;
   anthropic: {
@@ -232,6 +233,8 @@ export function loadConfig(
 
   const port = rawConfig.port ?? (mergedEnv.PORT ? parseInt(mergedEnv.PORT, 10) : 8000);
 
+  const editor = rawConfig.editor ?? mergedEnv.EDITOR ?? mergedEnv.VISUAL ?? "code --wait";
+
   const defaultDestinations: DestinationsConfig = {
     pw: true,
     e: true,
@@ -250,6 +253,7 @@ export function loadConfig(
   return {
     port,
     notebookPath,
+    editor,
     destinations,
     configPath: configFile,
     anthropic: {

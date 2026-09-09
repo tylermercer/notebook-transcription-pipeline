@@ -157,6 +157,7 @@ Example `config.jsonc`:
   "envPath": ".env",
   "pwFolder": "./notes/personal-writing",
   "eFolder": "./notes/e",
+  "editor": "code --wait",
   "destinations": {
     "pw": true,
     "e": true,

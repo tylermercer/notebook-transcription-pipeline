@@ -34,6 +34,7 @@ export interface RawConfigFile {
   port?: number;
   notebookPath?: string;
   envPath?: string;
+  editor?: string;
   destinations?: DestinationsConfig;
   pwFolder?: string;
   eFolder?: string;

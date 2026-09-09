@@ -68,6 +68,7 @@ PLAIN_VAL=hello
     expect(config).toEqual({
       port: 8000,
       notebookPath: resolve(cwd, "notebook.md"),
+      editor: "code --wait",
       configPath: undefined,
       destinations: {
         pw: true,
@@ -114,10 +115,26 @@ PLAIN_VAL=hello
     const cwd = process.cwd();
     const config = loadConfig(env, { scriptDir: cwd });
 
+    expect(config.editor).toBe("code --wait");
     expect(config.resend.fromEmail).toBe("notebook@yourdomain.com");
     expect(config.resend.toEmail).toBe("tmercer+notebook@lucidchart.com");
     expect(config.storage.pwFolder).toBe(resolve(cwd, "./notes/personal-writing"));
     expect(config.storage.eFolder).toBe(resolve(cwd, "./notes/e"));
+  });
+
+  it("resolves editor from EDITOR or VISUAL environment variables", () => {
+    const env = {
+      EDITOR: "vim",
+      ANTHROPIC_API_KEY: "test-anthropic-key",
+      TODOIST_API_TOKEN: "test-todoist-token",
+      TODOIST_INNERHELM_PROJECT_ID: "proj-123",
+      TODOIST_EQP_PROJECT_ID: "proj-456",
+      READWISE_API_TOKEN: "test-readwise-token",
+      RESEND_API_KEY: "test-resend-key",
+    };
+
+    const config = loadConfig(env, { allowMissing: true });
+    expect(config.editor).toBe("vim");
   });
 
   it("throws an error if a required env var is missing", () => {

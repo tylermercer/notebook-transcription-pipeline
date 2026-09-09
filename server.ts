@@ -5,6 +5,7 @@ import { loadConfig } from "./config";
 import { processFile, ensureStorageFolders } from "./runner";
 import { AnthropicClient } from "./clients/anthropic";
 import { readNotebookTail, appendNotebookEntry } from "./lib/notebook";
+import { openEditorWithText } from "./lib/editor";
 import { printQr } from "./lib/qr";
 import { getLanIp, validateToken } from "./lib/server-helpers";
 
@@ -93,10 +94,12 @@ async function main() {
           }
 
           const recentNotebookTail = await readNotebookTail(filePath, 10);
-          const transcript = await anthropic.transcribeImages({
+          const rawTranscript = await anthropic.transcribeImages({
             images,
             recentNotebookTail,
           });
+
+          const transcript = await openEditorWithText(rawTranscript, config.editor);
 
           return new Response(JSON.stringify({ transcript }), {
             headers: { "Content-Type": "application/json" },
