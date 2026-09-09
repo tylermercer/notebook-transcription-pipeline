@@ -4,6 +4,8 @@ export interface CreateTaskParams {
   projectId?: string;
   /** YYYY-MM-DD */
   dueDate?: string;
+  /** Sent as X-Request-Id; Todoist discards a POST with a previously-seen ID. */
+  idempotencyKey?: string;
 }
 
 export class TodoistClient {
@@ -13,12 +15,17 @@ export class TodoistClient {
   ) {}
 
   async createTask(params: CreateTaskParams): Promise<void> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${this.apiToken}`,
+      "Content-Type": "application/json",
+    };
+    if (params.idempotencyKey) {
+      headers["X-Request-Id"] = params.idempotencyKey;
+    }
+
     const res = await fetch(`${this.baseUrl}/tasks`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiToken}`,
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         content: params.content,
         project_id: params.projectId,

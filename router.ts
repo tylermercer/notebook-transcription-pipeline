@@ -4,6 +4,7 @@ import type { TodoistClient } from "./clients/todoist";
 import type { ReadwiseClient } from "./clients/readwise";
 import type { ResendClient } from "./clients/resend";
 import type { Note } from "./types";
+import { resendIdempotencyKey, todoistRequestId } from "./lib/idempotency";
 
 export interface RouteDeps {
   config: AppConfig;
@@ -139,6 +140,7 @@ export async function routeNote(
         await deps.todoist.createTask({
           content: note.text,
           dueDate: todayIso(deps),
+          idempotencyKey: todoistRequestId("T", note.date, note.text),
         });
         break;
 
@@ -146,6 +148,7 @@ export async function routeNote(
         await deps.todoist.createTask({
           content: note.text,
           projectId: deps.config.todoist.innerhelmProjectId,
+          idempotencyKey: todoistRequestId("I", note.date, note.text),
         });
         break;
 
@@ -153,6 +156,7 @@ export async function routeNote(
         await deps.todoist.createTask({
           content: note.text,
           projectId: deps.config.todoist.eqpProjectId,
+          idempotencyKey: todoistRequestId("EQ", note.date, note.text),
         });
         break;
 
@@ -166,6 +170,7 @@ export async function routeNote(
           to: deps.config.resend.toEmail,
           subject: `Notebook entry — ${note.date}`,
           text: note.text,
+          idempotencyKey: resendIdempotencyKey(note.date, note.text),
         });
         break;
 

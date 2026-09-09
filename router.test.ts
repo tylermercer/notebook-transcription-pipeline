@@ -3,6 +3,7 @@ import { routeNote, routeNotes, type RouteDeps } from "./router";
 import type { KVStorage } from "./storage";
 import type { AppConfig } from "./config";
 import type { Note } from "./types";
+import { resendIdempotencyKey, todoistRequestId } from "./lib/idempotency";
 
 function createMockStorage(): KVStorage & { store: Map<string, string> } {
   const store = new Map<string, string>();
@@ -137,7 +138,7 @@ describe("router", () => {
   });
 
   describe("Todoist tags (T, I, EQ)", () => {
-    it("routes T tag to Todoist with due date set to today", async () => {
+    it("routes T tag to Todoist with due date set to today and idempotencyKey", async () => {
       const deps = createMockDeps({ today: () => "2026-09-01" });
       const note: Note = { date: "2026-08-20", text: "Task today", tags: ["T"] };
 
@@ -146,10 +147,11 @@ describe("router", () => {
       expect(deps.todoist.createTask).toHaveBeenCalledWith({
         content: "Task today",
         dueDate: "2026-09-01",
+        idempotencyKey: todoistRequestId("T", "2026-08-20", "Task today"),
       });
     });
 
-    it("routes I tag to Todoist with innerhelmProjectId", async () => {
+    it("routes I tag to Todoist with innerhelmProjectId and idempotencyKey", async () => {
       const deps = createMockDeps();
       const note: Note = { date: "2026-08-20", text: "Writing idea", tags: ["I"] };
 
@@ -158,10 +160,11 @@ describe("router", () => {
       expect(deps.todoist.createTask).toHaveBeenCalledWith({
         content: "Writing idea",
         projectId: "innerhelm-id",
+        idempotencyKey: todoistRequestId("I", "2026-08-20", "Writing idea"),
       });
     });
 
-    it("routes EQ tag to Todoist with eqpProjectId", async () => {
+    it("routes EQ tag to Todoist with eqpProjectId and idempotencyKey", async () => {
       const deps = createMockDeps();
       const note: Note = { date: "2026-08-20", text: "EQP task", tags: ["EQ"] };
 
@@ -170,6 +173,7 @@ describe("router", () => {
       expect(deps.todoist.createTask).toHaveBeenCalledWith({
         content: "EQP task",
         projectId: "eqp-id",
+        idempotencyKey: todoistRequestId("EQ", "2026-08-20", "EQP task"),
       });
     });
   });
@@ -186,7 +190,7 @@ describe("router", () => {
   });
 
   describe("Resend tag (W)", () => {
-    it("routes W tag to Resend client", async () => {
+    it("routes W tag to Resend client with idempotencyKey", async () => {
       const deps = createMockDeps();
       const note: Note = { date: "2026-08-20", text: "Email note", tags: ["W"] };
 
@@ -197,7 +201,23 @@ describe("router", () => {
         to: "to@example.com",
         subject: "Notebook entry — 2026-08-20",
         text: "Email note",
+        idempotencyKey: resendIdempotencyKey("2026-08-20", "Email note"),
       });
+    });
+  });
+
+  describe("Idempotency for duplicate entries", () => {
+    it("produces identical idempotency keys for same-day, same-tag, same-text notes", async () => {
+      const deps = createMockDeps();
+      const note1: Note = { date: "2026-08-20", text: "Duplicate note", tags: ["T"] };
+      const note2: Note = { date: "2026-08-20", text: "Duplicate note", tags: ["T"] };
+
+      await routeNote(note1, deps);
+      await routeNote(note2, deps);
+
+      const calls = (deps.todoist.createTask as any).mock.calls;
+      expect(calls.length).toBe(2);
+      expect(calls[0][0].idempotencyKey).toBe(calls[1][0].idempotencyKey);
     });
   });
 

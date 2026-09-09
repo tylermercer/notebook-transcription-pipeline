@@ -39,6 +39,36 @@ describe("TodoistClient", () => {
     );
   });
 
+  it("includes X-Request-Id header when idempotencyKey is provided", async () => {
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "123" }), { status: 200 }),
+    );
+
+    const client = new TodoistClient("test-token");
+    await client.createTask({
+      content: "Idempotent task",
+      idempotencyKey: "test-idempotency-key-123",
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://api.todoist.com/rest/v2/tasks",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer test-token",
+          "Content-Type": "application/json",
+          "X-Request-Id": "test-idempotency-key-123",
+        },
+        body: JSON.stringify({
+          content: "Idempotent task",
+          project_id: undefined,
+          due_date: undefined,
+        }),
+      },
+    );
+  });
+
   it("sends POST request to create task in project", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValueOnce(

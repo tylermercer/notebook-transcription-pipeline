@@ -11,6 +11,7 @@ It parses transcribed notebook pages (stored in `notebook.md`), tracks routed it
 - [Tags & Routing Destinations](#tags--routing-destinations)
 - [Mobile Capture & UI Flow](#mobile-capture--ui-flow)
 - [Routing Mechanism](#routing-mechanism)
+- [Idempotency Guarantees](#idempotency-guarantees)
 - [Setup & Environment Variables](#setup--environment-variables)
 - [Configuration](#configuration)
 - [Available Scripts](#available-scripts)
@@ -103,6 +104,20 @@ Text Dan about foobar
 # Preview routing actions without side-effects
 pnpm run route --dry-run
 ```
+
+### Idempotency Guarantees
+
+`notebook-router` uses provider-level idempotency keys and server-side deduplication to ensure retries (e.g. process crashes after an API call succeeds but before marking `[x]` on disk) do not create duplicate entries in external services.
+
+| Tag | Destination | Idempotency Mechanism & Guarantees |
+|-----|-------------|------------------------------------|
+| `T`, `I`, `EQ` | Todoist | **Guaranteed:** Sends a content-derived `X-Request-Id` (`SHA-256` hash of `tag|date|text` truncated to 36 chars). Todoist discards duplicate requests with previously seen request IDs. |
+| `W` | Resend | **Guaranteed (within 24h):** Sends a deterministic `Idempotency-Key` header (`notebook-email/<date>/<hash>`). Resend returns the cached response for duplicate requests within 24 hours without re-sending emails. |
+| `R` | Readwise | **Guaranteed:** Readwise API natively de-duplicates highlights server-side on exact `title`, `author`, `text`, and `source_url` match. |
+| `PW` | Personal Writing | **No provider guarantee (Local File):** Appends bullets to local daily markdown files. Re-running an un-checkboxed item re-appends the bullet to the daily file. |
+| `E` | Sequential Notes | **No provider guarantee (Local File):** Writes notes to local target date files. Re-running an un-checkboxed item claims the next available date instead of overwriting existing files. |
+
+> **Note on identical duplicate entries:** Idempotency keys for Todoist and Resend are derived strictly from `tag` + `date` + `text`. If you have two verbatim identical notes on the same day with the same tag, the second entry will share the same idempotency key and will be ignored as a duplicate by Todoist/Resend.
 
 ---
 
