@@ -109,14 +109,33 @@ async function main() {
             recentNotebookTail,
           });
 
-          console.log("Waiting for your editor to close the file...");
-          const transcript = await openEditorWithText(rawTranscript, config.editor);
-
-          console.log(`Appending to ${filePath}`);
-          await appendNotebookEntry(filePath, transcript);
-
-          return new Response(JSON.stringify({ success: true, message: "Transcript reviewed on host and appended to notebook." }), {
-            headers: { "Content-Type": "application/json" },
+          console.log("Opening host editor...");
+          return await new Promise<Response>((resolve) => {
+            let spawned = false;
+            openEditorWithText(rawTranscript, config.editor, () => {
+              spawned = true;
+              console.log("Editor opened on host machine. Returning 204 to client.");
+              resolve(new Response(null, { status: 204 }));
+            })
+              .then(async (transcript) => {
+                console.log(`Appending to ${filePath}`);
+                await appendNotebookEntry(filePath, transcript);
+                console.log("Transcript successfully appended to notebook.");
+              })
+              .catch((err) => {
+                console.error("Editor / Notebook append error:", err);
+                if (!spawned) {
+                  resolve(
+                    new Response(
+                      JSON.stringify({ error: err.message || "Transcription failed" }),
+                      {
+                        status: 500,
+                        headers: { "Content-Type": "application/json" },
+                      },
+                    ),
+                  );
+                }
+              });
           });
         } catch (err: any) {
           console.error("Transcribe error:", err);
