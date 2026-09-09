@@ -39,6 +39,37 @@ describe("ResendClient", () => {
     });
   });
 
+  it("includes Idempotency-Key header when idempotencyKey is provided", async () => {
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "email-123" }), { status: 200 }),
+    );
+
+    const client = new ResendClient("test-resend-key");
+    await client.sendEmail({
+      from: "sender@example.com",
+      to: "recipient@example.com",
+      subject: "Test Subject",
+      text: "Email body content",
+      idempotencyKey: "test-resend-key-123",
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer test-resend-key",
+        "Content-Type": "application/json",
+        "Idempotency-Key": "test-resend-key-123",
+      },
+      body: JSON.stringify({
+        from: "sender@example.com",
+        to: "recipient@example.com",
+        subject: "Test Subject",
+        text: "Email body content",
+      }),
+    });
+  });
+
   it("throws error when API response is not ok", async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValueOnce(
