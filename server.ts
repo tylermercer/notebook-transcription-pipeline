@@ -2,7 +2,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig } from "./config";
-import { processFile, ensureStorageFolders } from "./runner";
+import { ensureStorageFolders } from "./runner";
 import { AnthropicClient } from "./clients/anthropic";
 import { readNotebookTail, appendNotebookEntry } from "./lib/notebook";
 import { openEditorWithText } from "./lib/editor";
@@ -109,40 +109,14 @@ async function main() {
 
           const transcript = await openEditorWithText(rawTranscript, config.editor);
 
-          return new Response(JSON.stringify({ transcript }), {
+          await appendNotebookEntry(filePath, transcript);
+
+          return new Response(JSON.stringify({ success: true, message: "Transcript reviewed on host and appended to notebook." }), {
             headers: { "Content-Type": "application/json" },
           });
         } catch (err: any) {
           console.error("Transcribe error:", err);
           return new Response(JSON.stringify({ error: err.message || "Transcription failed" }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-      }
-
-      if (req.method === "POST" && (reqUrl.pathname === "/commit" || actionHeader === "commit")) {
-        try {
-          const body = (await req.json()) as { transcript?: string };
-          const transcript = body.transcript || "";
-
-          if (!transcript.trim()) {
-            return new Response(JSON.stringify({ error: "Transcript is empty." }), {
-              status: 400,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-
-          await appendNotebookEntry(filePath, transcript);
-
-          const result = await processFile(filePath, false, config);
-
-          return new Response(JSON.stringify(result), {
-            headers: { "Content-Type": "application/json" },
-          });
-        } catch (err: any) {
-          console.error("Commit error:", err);
-          return new Response(JSON.stringify({ error: err.message || "Commit failed" }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
           });
