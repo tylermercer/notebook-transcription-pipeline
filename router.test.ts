@@ -61,6 +61,7 @@ function createMockDeps(overrides?: Partial<RouteDeps>): RouteDeps {
     readwise: { createHighlight: vi.fn().mockResolvedValue(undefined) } as any,
     resend: { sendEmail: vi.fn().mockResolvedValue(undefined) } as any,
     today: () => "2026-09-01",
+    logger: vi.fn(),
     ...overrides,
   };
 }
@@ -133,6 +134,47 @@ describe("router", () => {
       );
       expect(store.get("2026-09-02")).toBe(
         "---\ncreatedDate: 2026-08-21\n---\n\nSecond E note",
+      );
+    });
+  });
+
+  describe("Logging mode (non-dry run)", () => {
+    it("logs processed items in non-dry-run mode without DRY RUN prefix", async () => {
+      const logger = vi.fn();
+      const deps = createMockDeps({ dryRun: false, logger });
+
+      const note: Note = { date: "2026-08-20", text: "PW note", tags: ["PW"] };
+      await routeNote(note, deps);
+
+      expect(logger).toHaveBeenCalledWith(
+        '[PW] Append note to PW storage (./pw) for date 2026-08-20: "PW note"',
+      );
+      expect(logger).not.toHaveBeenCalledWith(
+        expect.stringContaining("[DRY RUN]"),
+      );
+    });
+
+    it("suppresses disabled destination message in non-dry-run mode", async () => {
+      const logger = vi.fn();
+      const deps = createMockDeps({ dryRun: false, logger });
+      deps.config.destinations.pw = false;
+
+      const note: Note = { date: "2026-08-20", text: "PW note", tags: ["PW"] };
+      await routeNote(note, deps);
+
+      expect(logger).not.toHaveBeenCalled();
+    });
+
+    it("logs disabled destination message in dry-run mode", async () => {
+      const logger = vi.fn();
+      const deps = createMockDeps({ dryRun: true, logger });
+      deps.config.destinations.pw = false;
+
+      const note: Note = { date: "2026-08-20", text: "PW note", tags: ["PW"] };
+      await routeNote(note, deps);
+
+      expect(logger).toHaveBeenCalledWith(
+        '[DISABLED] Destination tag "PW" is disabled in config. Skipping routing.',
       );
     });
   });

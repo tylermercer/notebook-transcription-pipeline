@@ -85,7 +85,9 @@ export async function processFile(
   for (const note of notes) {
     for (const tag of note.tags) {
       if (!isDestinationEnabled(config, tag)) {
-        customLogger(`Skipping disabled destination tag "${tag}" on note dated ${note.date}.`);
+        if (isDryRun) {
+          customLogger(`Skipping disabled destination tag "${tag}" on note dated ${note.date}.`);
+        }
         continue;
       }
 
