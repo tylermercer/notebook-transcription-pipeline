@@ -11,7 +11,7 @@ export interface CreateTaskParams {
 export class TodoistClient {
   constructor(
     private readonly apiToken: string,
-    private readonly baseUrl = "https://api.todoist.com/rest/v2",
+    private readonly baseUrl = "https://api.todoist.com/api/v1",
   ) {}
 
   async createTask(params: CreateTaskParams): Promise<void> {
