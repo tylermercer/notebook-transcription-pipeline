@@ -23,7 +23,7 @@ describe("TodoistClient", () => {
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://api.todoist.com/rest/v2/tasks",
+      "https://api.todoist.com/api/v1/tasks",
       {
         method: "POST",
         headers: {
@@ -52,7 +52,7 @@ describe("TodoistClient", () => {
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://api.todoist.com/rest/v2/tasks",
+      "https://api.todoist.com/api/v1/tasks",
       {
         method: "POST",
         headers: {
@@ -82,7 +82,7 @@ describe("TodoistClient", () => {
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://api.todoist.com/rest/v2/tasks",
+      "https://api.todoist.com/api/v1/tasks",
       {
         method: "POST",
         headers: {
