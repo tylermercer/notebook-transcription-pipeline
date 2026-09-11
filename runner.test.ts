@@ -97,7 +97,7 @@ Test dry run note
     expect(result.logLines[0]).toContain("File not found");
   });
 
-  it("skips disabled destination tags and does not check them off in file", async () => {
+  it("skips disabled destination tags and logs skip message only in dry-run mode", async () => {
     const customConfig = loadConfig({}, { allowMissing: true });
     customConfig.destinations = {
       pw: true,
@@ -111,13 +111,12 @@ Test multi destination
     await writeFile(testFile, sampleNotebook, "utf-8");
 
     try {
-      const logs: string[] = [];
-      // dryRun: true to avoid Bun-dependent FileKVStorage in vitest
-      const result = await processFile(testFile, true, customConfig, (msg) => logs.push(msg));
+      const dryLogs: string[] = [];
+      const dryResult = await processFile(testFile, true, customConfig, (msg) => dryLogs.push(msg));
 
-      expect(result.notesProcessed).toBe(1);
-      expect(result.tagActionsProcessed).toBe(1); // PW processed, R skipped
-      expect(logs.some((line) => line.includes('Skipping disabled destination tag "R"'))).toBe(true);
+      expect(dryResult.notesProcessed).toBe(1);
+      expect(dryResult.tagActionsProcessed).toBe(1); // PW processed, R skipped
+      expect(dryLogs.some((line) => line.includes('Skipping disabled destination tag "R"'))).toBe(true);
     } finally {
       if (existsSync(testFile)) {
         await unlink(testFile);

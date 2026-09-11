@@ -58,7 +58,9 @@ export async function routeNote(
 
   for (const tag of note.tags) {
     if (!isDestinationEnabled(deps.config, tag)) {
-      log(`[DISABLED] Destination tag "${tag}" is disabled in config. Skipping routing.`);
+      if (deps.dryRun) {
+        log(`[DISABLED] Destination tag "${tag}" is disabled in config. Skipping routing.`);
+      }
       continue;
     }
 
@@ -123,6 +125,9 @@ export async function routeNote(
     switch (tag) {
       case "PW":
         await appendNoteToDoc(deps.pwStorage, note.date, note.text);
+        log(
+          `[PW] Append note to PW storage (${deps.config.storage.pwFolder}) for date ${note.date}: "${note.text}"`,
+        );
         break;
 
       case "E": {
@@ -133,6 +138,9 @@ export async function routeNote(
         );
         const content = `---\ncreatedDate: ${note.date}\n---\n\n${note.text}`;
         await deps.eStorage.put(targetDate, content);
+        log(
+          `[E] Save note to E storage (${deps.config.storage.eFolder}) for date ${targetDate} (createdDate: ${note.date}): "${note.text}"`,
+        );
         break;
       }
 
@@ -142,6 +150,9 @@ export async function routeNote(
           dueDate: todayIso(deps),
           idempotencyKey: todoistRequestId("T", note.date, note.text),
         });
+        log(
+          `[T] Create Todoist task in Inbox (due: ${todayIso(deps)}): "${note.text}"`,
+        );
         break;
 
       case "I":
@@ -150,6 +161,9 @@ export async function routeNote(
           projectId: deps.config.todoist.innerhelmProjectId,
           idempotencyKey: todoistRequestId("I", note.date, note.text),
         });
+        log(
+          `[I] Create Todoist task in Innerhelm project (${deps.config.todoist.innerhelmProjectId}): "${note.text}"`,
+        );
         break;
 
       case "EQ":
@@ -158,10 +172,16 @@ export async function routeNote(
           projectId: deps.config.todoist.eqpProjectId,
           idempotencyKey: todoistRequestId("EQ", note.date, note.text),
         });
+        log(
+          `[EQ] Create Todoist task in EQP project (${deps.config.todoist.eqpProjectId}): "${note.text}"`,
+        );
         break;
 
       case "R":
         await deps.readwise.createHighlight(note.text, note.date);
+        log(
+          `[R] Create Readwise highlight for date ${note.date}: "${note.text}"`,
+        );
         break;
 
       case "W":
@@ -172,6 +192,9 @@ export async function routeNote(
           text: note.text,
           idempotencyKey: resendIdempotencyKey(note.date, note.text),
         });
+        log(
+          `[W] Send email via Resend to ${deps.config.resend.toEmail} from ${deps.config.resend.fromEmail}: "${note.text}"`,
+        );
         break;
 
       default:
