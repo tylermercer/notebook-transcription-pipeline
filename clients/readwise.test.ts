@@ -33,7 +33,7 @@ describe("ReadwiseClient", () => {
               text: "Quote text",
               title: "Personal Notes",
               author: "Tyler Mercer",
-              note: "Note date: 2026-09-01",
+              note: "2026-09-01",
             },
           ],
         }),
