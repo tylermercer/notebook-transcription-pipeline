@@ -17,7 +17,7 @@ export class ReadwiseClient {
             text,
             title: "Personal Notes",
             author: "Tyler Mercer",
-            note: `Note date: ${noteDate}`,
+            note: `${noteDate}`,
           },
         ],
       }),
