@@ -1,0 +1,17 @@
+{
+  "name": "worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "vite": "^8.3.0",
+    "wrangler": "^4.136.3"
+  },
+  "dependencies": {
+    "@cloudflare/vite-plugin": "^1.57.3"
+  }
+}

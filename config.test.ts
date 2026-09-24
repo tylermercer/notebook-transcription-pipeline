@@ -68,6 +68,7 @@ PLAIN_VAL=hello
     expect(config).toEqual({
       port: 8000,
       notebookPath: resolve(cwd, "notebook.md"),
+      webhookNotebookPath: resolve(cwd, "webhook-notebook.md"),
       editor: "code --wait",
       configPath: undefined,
       destinations: {

@@ -33,6 +33,7 @@ export interface DestinationsConfig {
 export interface RawConfigFile {
   port?: number;
   notebookPath?: string;
+  webhookNotebookPath?: string;
   envPath?: string;
   editor?: string;
   destinations?: DestinationsConfig;

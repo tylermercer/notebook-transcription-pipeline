@@ -11,5 +11,6 @@
     "noUncheckedIndexedAccess": true,
     "types": ["bun"]
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts"],
+  "exclude": ["apps/worker/**/*", "scripts/pull-ingest.test.ts"]
 }

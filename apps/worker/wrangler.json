@@ -1,0 +1,13 @@
+{
+	"name": "notebook-ingest-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2024-09-23",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "notebook_db",
+			"database_id": "0334a7fe-6356-407a-a6f1-e2d6f6238c67",
+			"remote": true
+		}
+	]
+}

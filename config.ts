@@ -5,6 +5,7 @@ import type { DestinationsConfig, RawConfigFile } from "./types";
 export interface AppConfig {
   port: number;
   notebookPath: string;
+  webhookNotebookPath: string;
   editor: string;
   destinations: DestinationsConfig;
   configPath?: string;
@@ -221,6 +222,11 @@ export function loadConfig(
     ? resolve(configDir, rawConfig.notebookPath)
     : (mergedEnv.NOTEBOOK_FILE ? resolve(configDir, mergedEnv.NOTEBOOK_FILE) : defaultNotebookPath);
 
+  const defaultWebhookNotebookPath = resolve(configDir, "webhook-notebook.md");
+  const webhookNotebookPath = rawConfig.webhookNotebookPath
+    ? resolve(configDir, rawConfig.webhookNotebookPath)
+    : defaultWebhookNotebookPath;
+
   const defaultPwFolder = resolve(configDir, "./notes/personal-writing");
   const pwFolder = rawConfig.pwFolder
     ? resolve(configDir, rawConfig.pwFolder)
@@ -253,6 +259,7 @@ export function loadConfig(
   return {
     port,
     notebookPath,
+    webhookNotebookPath,
     editor,
     destinations,
     configPath: configFile,
