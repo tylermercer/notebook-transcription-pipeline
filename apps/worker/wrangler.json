@@ -1,0 +1,12 @@
+{
+  "name": "notebook-ingest-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-09-23",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "notebook_db",
+      "database_id": "notebook_db_id"
+    }
+  ]
+}

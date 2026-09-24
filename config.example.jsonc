@@ -6,6 +6,9 @@
   // Path to the notebook markdown transcript file (relative to this config file or absolute)
   "notebookPath": "notebook.md",
 
+  // Path to the second webhook notebook file pulled from D1 (relative to this config file or absolute)
+  "webhookNotebookPath": "webhook-notebook.md",
+
   // Path to .env file containing secret credentials (relative to this config file or absolute)
   "envPath": ".env",
 

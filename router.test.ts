@@ -21,6 +21,7 @@ function createMockDeps(overrides?: Partial<RouteDeps>): RouteDeps {
   const config: AppConfig = {
     port: 8000,
     notebookPath: "notebook.md",
+    webhookNotebookPath: "webhook-notebook.md",
     editor: "code --wait",
     destinations: {
       pw: true,

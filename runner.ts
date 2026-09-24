@@ -175,7 +175,7 @@ async function main() {
 
   let filePaths = parsed.filePaths;
   if (filePaths.length === 0) {
-    filePaths = [config.notebookPath];
+    filePaths = [config.notebookPath, config.webhookNotebookPath];
   }
 
   if (!parsed.isDryRun) {
